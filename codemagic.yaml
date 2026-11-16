@@ -48,6 +48,10 @@ workflows:
       - name: Set up code signing
         script: |
           if [ -n "$CERTIFICATE_PRIVATE_KEY" ]; then echo "CERTIFICATE_PRIVATE_KEY present (length ${#CERTIFICATE_PRIVATE_KEY})"; else echo "CERTIFICATE_PRIVATE_KEY MISSING in build environment"; fi
+          echo "KEY_IDENTIFIER check: $(printf '%s' "$APP_STORE_CONNECT_KEY_IDENTIFIER" | sed 's/./& /g')"
+          echo "ISSUER_ID check: $(printf '%s' "$APP_STORE_CONNECT_ISSUER_ID" | sed 's/./& /g')"
+          echo "ASC_PRIVATE_KEY length: $(printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" | wc -c | tr -d ' ')"
+          echo "ASC_PRIVATE_KEY first line: $(printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" | head -n 1)"
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE --create
