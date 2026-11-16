@@ -47,9 +47,11 @@ workflows:
           npx cap sync ios
       - name: Set up code signing
         script: |
+          if [ -n "$CERTIFICATE_PRIVATE_KEY" ]; then echo "CERTIFICATE_PRIVATE_KEY present (length ${#CERTIFICATE_PRIVATE_KEY})"; else echo "CERTIFICATE_PRIVATE_KEY MISSING in build environment"; fi
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE --create
+            --type IOS_APP_STORE --create \
+            --certificate-private-key "$CERTIFICATE_PRIVATE_KEY"
           keychain add-certificates
           xcode-project use-profiles
       - name: Build the IPA
