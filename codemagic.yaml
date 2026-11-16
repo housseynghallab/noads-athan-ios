@@ -47,6 +47,8 @@ workflows:
           npx cap sync ios
       - name: Set up code signing
         script: |
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="5LVRV8ZAPR"
+          export APP_STORE_CONNECT_ISSUER_ID="e95b4dbc-69d5-45d9-a38f-5175966ba6cb"
           if [ -n "$CERTIFICATE_PRIVATE_KEY" ]; then echo "CERTIFICATE_PRIVATE_KEY present (length ${#CERTIFICATE_PRIVATE_KEY})"; else echo "CERTIFICATE_PRIVATE_KEY MISSING in build environment"; fi
           echo "KEY_IDENTIFIER check: $(printf '%s' "$APP_STORE_CONNECT_KEY_IDENTIFIER" | sed 's/./& /g')"
           echo "ISSUER_ID check: $(printf '%s' "$APP_STORE_CONNECT_ISSUER_ID" | sed 's/./& /g')"
