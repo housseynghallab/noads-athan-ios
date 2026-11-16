@@ -64,15 +64,22 @@ workflows:
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
+      # Publishing is a script step, NOT Codemagic's built-in
+      # publishing block: the built-in block resolved key_id from the
+      # APP_STORE_CONNECT_KEY_IDENTIFIER group variable, which is
+      # empty in Codemagic despite repeated re-pastes (build #8,
+      # 2026-11-16: signing succeeded with the IDs pinned in the
+      # signing script, the IPA built, but the built-in upload step
+      # failed in altool). Here the two identifiers are pinned again
+      # (public values, not secrets); only the .p8 comes from the
+      # group. Lands in TestFlight only — App Store release stays a
+      # manual decision in App Store Connect after testing.
+      - name: Publish to TestFlight
+        script: |
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="5LVRV8ZAPR"
+          export APP_STORE_CONNECT_ISSUER_ID="e95b4dbc-69d5-45d9-a38f-5175966ba6cb"
+          app-store-connect publish --testflight \
+            --path "build/ios/ipa/*.ipa"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        # Land in TestFlight only. App Store release stays a manual
-        # decision in App Store Connect after testing.
-        submit_to_testflight: true
-        submit_to_app_store: false
