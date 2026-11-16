@@ -1,0 +1,17 @@
+{
+	"appId": "com.housseyn.noadsathan",
+	"appName": "NoAds Athan",
+	"webDir": "www",
+	"ios": {
+		"contentInset": "never"
+	},
+	"plugins": {
+		"LocalNotifications": {
+			"smallIcon": "ic_launcher",
+			"iconColor": "#0b1e3a"
+		}
+	},
+	"packageClassList": [
+		"LocalNotificationsPlugin"
+	]
+}

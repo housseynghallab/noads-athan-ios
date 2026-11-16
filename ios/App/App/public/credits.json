@@ -1,0 +1,111 @@
+{
+  "photos": [
+    {
+      "file": "bg1.jpg",
+      "title": "Masjid al Haram Exterior",
+      "author": "King Eliot",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Masjid_al_Haram_Exterior.jpg"
+    },
+    {
+      "file": "bg2.jpg",
+      "title": "Mecca 2012",
+      "author": "Ilhamnobi",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Mecca_2012.jpg"
+    },
+    {
+      "file": "bg3.jpg",
+      "title": "Masjid al-Haram, Tawaf 20092012 1130PM",
+      "author": "Basheer Olakara",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Masjid_al-Haram,_Tawaf_20092012_1130PM_(8008466944).jpg"
+    },
+    {
+      "file": "bg4.jpg",
+      "title": "Tawaf around Kaaba 01",
+      "author": "Mohammad Hossein Velayati",
+      "license": "CC BY 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Tawaf_around_Kaaba_01.jpg"
+    },
+    {
+      "file": "bg5.jpg",
+      "title": "Environs of the Grand Mosque of Makkah, Saudi Arabia, at night (2)",
+      "author": "Richard Mortel",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Environs_of_the_Grand_Mosque_of_Makkah,_Saudi_Arabia,_at_night_(2)_(52501898195).jpg"
+    }
+  ],
+  "adhan_audio": [
+    {
+      "file": "adhan.mp3",
+      "name": "Classic",
+      "title": "The Adhan - Muslim Call to Prayer",
+      "author": "Aaqib Azeez",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3"
+    },
+    {
+      "file": "adhan2.mp3",
+      "name": "Makkah",
+      "title": "Adhan, Great Mosque of Mecca - Jan 21, 2013",
+      "author": "Seyfula Islam",
+      "license": "CC BY 3.0",
+      "note": "Audio extracted from the video and converted to MP3.",
+      "source": "https://commons.wikimedia.org/wiki/File:Adhan,_Great_Mosque_of_Mecca_-_Jan_21,_2013.webm"
+    },
+    {
+      "file": "adhan3.mp3",
+      "name": "Madinah",
+      "title": "Call to prayer from the Prophet's Mosque, Madinah",
+      "author": "ejaz215 (via Freesound)",
+      "license": "CC BY 3.0",
+      "note": "Converted from OGG Vorbis to MP3.",
+      "source": "https://commons.wikimedia.org/wiki/File:33937_ejaz215_call-to-prayer-from-the-prophet-s-mo.ogg"
+    },
+    {
+      "file": "adhan4.mp3",
+      "name": "Sabah Fakhry",
+      "title": "Call to prayer by Sabah Fakhry",
+      "author": "Sabah Fakhry",
+      "license": "Public domain",
+      "source": "https://commons.wikimedia.org/wiki/File:Call_to_prayer_by_Sabah_Fakhry.mp3"
+    },
+    {
+      "file": "salat-reminder.mp3",
+      "name": "Salat reminder voice",
+      "title": "Spoken reminder: 'It's time for Salat!'",
+      "author": "Produced for Athan TV",
+      "license": "Original production for this app",
+      "source": ""
+    }
+  ],
+  "quran_audio": [
+    {
+      "what": "Quran recitation audio (streamed, not embedded)",
+      "source": "mp3quran.net CDN — Hafs Murattal mushaf per reciter, full-surah MP3s",
+      "reciters": [
+        "Mishary Alafasy — cdn.mp3quran.net/audio/mishary-alafasy/r1/",
+        "Saad Al-Ghamdi — cdn.mp3quran.net/audio/saad-ghamdi/r1/",
+        "Maher Al-Muaiqly — cdn.mp3quran.net/audio/maher-muaiqly/r1/",
+        "Mahmoud Khalil Al-Husary — cdn.mp3quran.net/audio/mahmoud-husary/r1/",
+        "Mohamed Siddiq El-Minshawi — cdn.mp3quran.net/audio/muhammad-minshawi/r1/",
+        "Abdul Basit Abd us-Samad — cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r3/"
+      ]
+    }
+  ],
+  "texts": [
+    {
+      "what": "Quran Arabic text (Uthmani script)",
+      "source": "Tanzil (tanzil.net), via AlQuran Cloud API edition quran-uthmani"
+    },
+    {
+      "what": "Quran English translation",
+      "source": "Saheeh International, via AlQuran Cloud API edition en.sahih"
+    },
+    {
+      "what": "Duas and adhkar (Arabic + English)",
+      "source": "Hisnul Muslim (Fortress of the Muslim) by Saeed bin Wahf al-Qahtani; dataset: github.com/adiman-dev/Hisnul-Muslim (SQL dump)"
+    }
+  ]
+}

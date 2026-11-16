@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoAds Athan</title>
+<!-- iOS only: translates the NoAdsBridge schedule calls into Capacitor
+     local notifications. A no-op on Android / webOS / desktop. -->
+<script src="ios-bridge.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0b1e3a;
+    color: #f5f1e6;
+    font-family: "LG Smart", "Segoe UI", Arial, sans-serif;
+    overflow: hidden;
+  }
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    padding: 48px 64px;
+  }
+  /* Haram photo slideshow layers */
+  .bglayer {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-size: cover; background-position: center;
+    z-index: 0; opacity: 0;
+    transition: opacity 2.5s ease;
+  }
+  #bgShade {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    /* v1.2.0 (TV v1.6.0 look): the photo stays bright and vivid — only a
+       light shade at the very top (behind the brand row) and a soft dark
+       gradient low on the screen behind the prayer cards. */
+    background: linear-gradient(180deg, rgba(4,10,24,0.34) 0%, rgba(4,10,24,0.10) 26%, rgba(4,10,24,0.04) 52%, rgba(4,10,24,0.30) 78%, rgba(4,10,24,0.55) 100%);
+    z-index: 1;
+  }
+  #screen-home {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    width: 100%; flex: 1;
+    padding-bottom: 118px; /* clear the fixed bottom menu band */
+  }
+  /* Brand row (v1.2.0, ported from TV v1.6.0): logo mark + app name at
+     the top-start corner, over the photo (mirrors in RTL). */
+  #brand {
+    align-self: flex-start;
+    display: flex; align-items: center; gap: 20px;
+  }
+  #brandlogo {
+    width: 80px; height: 80px; border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.55);
+  }
+  h1 {
+    font-size: 46px; font-weight: 700; letter-spacing: 0.5px;
+    color: #ffffff;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.85), 0 0 5px rgba(0,0,0,0.6);
+  }
+  /* Location detail line — "<City> · <Country> · <METHOD> · Asr: <x>",
+     kept from the share header as a smaller second line. */
+  #place {
+    align-self: flex-start;
+    font-size: 21px; color: #d7e1f2; margin-top: 10px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.7);
+  }
+  /* Huge glowing clock (TV v1.6.0): pale icy blue with a soft layered
+     glow, no backing pill — it sits directly on the photo. */
+  #clock {
+    font-size: 172px; font-weight: 700; line-height: 1.05;
+    margin-top: 18px; font-variant-numeric: tabular-nums;
+    color: #d9ecff; white-space: nowrap;
+    text-shadow: 0 0 16px rgba(165,208,255,0.85),
+                 0 0 44px rgba(120,182,255,0.55),
+                 0 0 92px rgba(90,150,255,0.35),
+                 0 3px 12px rgba(0,18,46,0.5);
+  }
+  /* Merged dateline (TV v1.6.0): short date, selected city, next prayer
+     and its countdown on one white line with a soft shadow, no pill. */
+  #dateline {
+    font-size: 31px; font-weight: 600; color: #ffffff; margin-top: 14px;
+    white-space: nowrap;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.65);
+  }
+  /* Now-playing pill (TV v1.6.1): shown on the home screen while a
+     Quran recitation keeps playing after navigating back home. */
+  #nowplaying {
+    display: none;
+    font-size: 25px; color: #ffe9a8; margin-top: 10px;
+    background: rgba(4,10,24,0.45);
+    border: 2px solid rgba(232, 200, 119, 0.75); border-radius: 12px;
+    padding: 4px 22px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.85);
+  }
+  #times {
+    display: flex; flex-direction: row; gap: 22px;
+    margin-top: auto; width: 100%; justify-content: center;
+  }
+  /* Prayer cards (TV v1.6.0): white cards with navy text and a stroke
+     icon above the name. The prayer currently in effect is a gold card
+     with a "Now" tag; the next prayer is deep navy. */
+  .card {
+    flex: 1 1 0; max-width: 262px; position: relative;
+    background: rgba(255, 255, 255, 0.94);
+    border: 2px solid rgba(255, 255, 255, 0.94);
+    border-radius: 22px;
+    padding: 40px 10px 24px;
+    text-align: center;
+    box-shadow: 0 10px 28px rgba(0, 8, 24, 0.35);
+  }
+  .card .icon { height: 52px; color: #0b1e3a; }
+  .card .icon svg { width: 48px; height: 48px; }
+  .card .name {
+    font-size: 30px; font-weight: 600; color: #0b1e3a; letter-spacing: 0.5px;
+    margin-top: 8px;
+  }
+  .card .time {
+    font-size: 45px; font-weight: 700; margin-top: 6px; color: #0b1e3a;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .card .nowtag {
+    position: absolute; top: 12px; left: 50%;
+    -webkit-transform: translateX(-50%); transform: translateX(-50%);
+    background: #8a6410; color: #fff6dd;
+    font-size: 19px; font-weight: 700; letter-spacing: 1px;
+    padding: 3px 16px 4px; border-radius: 999px; white-space: nowrap;
+  }
+  .card.now-card {
+    background: linear-gradient(180deg, #f3c969 0%, #dfa92e 100%);
+    border-color: #f6d47c;
+  }
+  .card.next-prayer {
+    background: #10294f;
+    border-color: #10294f;
+  }
+  .card.next-prayer .name, .card.next-prayer .time { color: #ffffff; }
+  .card.next-prayer .icon { color: #e8c877; }
+  /* Bottom menu band (TV v1.6.0): full-width deep-navy bar with a gold
+     top edge holding the home actions as touch items; it wraps to two
+     rows on narrow screens so every item stays reachable. */
+  #menubar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    background: linear-gradient(180deg, #132f57 0%, #0b1e3a 100%);
+    border-top: 3px solid #e8c877;
+    display: flex; flex-direction: row; flex-wrap: wrap;
+    align-items: center; justify-content: center;
+    padding: 15px 24px 17px;
+  }
+  #menubar .sep {
+    color: rgba(232, 200, 119, 0.75); font-size: 20px; margin: 0 4px;
+  }
+  #menubar button {
+    background: transparent; border: 3px solid transparent;
+    color: #f5f1e6; font-size: 29px; padding: 9px 24px;
+    border-radius: 999px; text-shadow: 0 1px 5px rgba(0,0,0,0.45);
+    white-space: nowrap;
+  }
+  #menubar button:focus, #menubar button:active {
+    color: #ffd968; border-color: #e8c877;
+    background: rgba(232, 200, 119, 0.18);
+  }
+  button {
+    font-size: 30px; padding: 18px 42px;
+    border-radius: 14px; border: 3px solid transparent;
+    background: rgba(6, 14, 30, 0.55); color: #f5f1e6;
+    outline: none; cursor: pointer; font-family: inherit;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  }
+  button:focus { border-color: #e8c877; background: rgba(96, 74, 16, 0.60); }
+  #soundmsg {
+    display: none;
+    margin-top: 30px; font-size: 32px; color: #ffdf8e;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 14px 30px; border-radius: 12px;
+  }
+  #playing {
+    display: none;
+    margin-top: 30px; font-size: 36px; color: #e8c877;
+  }
+  #credits {
+    margin-top: 36px; font-size: 15px; text-align: center;
+    color: rgba(245, 241, 230, 0.75);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.8);
+  }
+  /* Full-screen sub-screens (Quran / Duas) */
+  .screen {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: #0b1e3a; z-index: 10;
+    display: none; flex-direction: column;
+    padding: 36px 56px;
+  }
+  .screen.on { display: flex; }
+  .scr-head {
+    font-size: 40px; font-weight: 700; color: #e8c877;
+    text-align: center; margin-bottom: 20px;
+  }
+  .scr-foot {
+    font-size: 20px; color: #8fa5c8; text-align: center; margin-top: 14px;
+  }
+  /* Sub-screen header row: visible Back button + centered title (v1.5.0) */
+  .scr-top { display: flex; align-items: center; margin-bottom: 20px; }
+  .scr-top .scr-head { flex: 1; margin-bottom: 0; }
+  .scr-spacer { width: 158px; flex: none; }
+  .btn-back { font-size: 24px; padding: 10px 24px; min-width: 158px; flex: none; }
+  .lrow.past { opacity: 0.45; }
+  #btnListen { margin-inline-start: 16px; }
+  /* Hijri date + occasion greeting on the home screen (v1.5.0) */
+  #hijri {
+    font-size: 27px; color: #e8c877; margin-top: 10px;
+    background: rgba(4,10,24,0.38);
+    padding: 4px 22px; border-radius: 12px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.85);
+  }
+  #greeting {
+    display: none;
+    font-size: 34px; font-weight: 600; color: #ffe9a8; margin-top: 22px;
+    background: rgba(52, 38, 8, 0.62);
+    border: 2px solid #e8c877; border-radius: 16px;
+    padding: 8px 32px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.85);
+  }
+  .listbox { flex: 1; overflow-y: auto; position: relative; -webkit-overflow-scrolling: touch; }
+  .lrow {
+    padding: 15px 22px; font-size: 30px; border-radius: 12px;
+    color: #f5f1e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border: 2px solid transparent;
+  }
+  .lrow .sub { color: #b9c8e2; font-size: 24px; }
+  .lrow.hl { background: rgba(232, 200, 119, 0.20); border-color: #e8c877; }
+  .lhead {
+    padding: 24px 22px 8px; font-size: 27px; font-weight: 700;
+    color: #e8c877; letter-spacing: 1px;
+  }
+  .readbox { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #qplay-bar { text-align: center; margin-bottom: 14px; }
+  #btnReciter { margin-inline-start: 16px; }
+  #qplay-status { margin-top: 10px; font-size: 24px; color: #b9c8e2; min-height: 30px; }
+  #qplay-status.err { color: #ff9d8a; }
+  .ayah { margin-bottom: 30px; }
+  .ayah .ar {
+    font-size: 42px; line-height: 1.9; text-align: right; color: #f5f1e6;
+  }
+  .ayah .en { font-size: 24px; line-height: 1.5; color: #b9c8e2; margin-top: 6px; }
+  .ayah .num { color: #e8c877; font-size: 24px; }
+  /* Salat reminder overlay */
+  #salat-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 60; display: none;
+    align-items: center; justify-content: center;
+  }
+  #salat-overlay.on { display: flex; }
+  #salat-pill {
+    background: rgba(0, 0, 0, 0.74);
+    border: 3px solid #e8c877; border-radius: 26px;
+    color: #ffe9a8; font-size: 72px; font-weight: 700;
+    padding: 38px 56px; text-align: center; max-width: 86%;
+  }
+
+  /* ---- Phone pass (Android): touch scrolling + small portrait screens ---- */
+  [dir="rtl"] .ayah .en { direction: ltr; text-align: left; }
+  .lrow, .lhead { cursor: pointer; }
+  @media (max-width: 760px) {
+    body { padding: 14px 12px; }
+    #screen-home { overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 128px; }
+    #brand { gap: 10px; }
+    #brandlogo { width: 42px; height: 42px; border-radius: 10px; }
+    h1 { font-size: 24px; }
+    #place { font-size: 13px; margin-top: 6px; }
+    #clock { font-size: 60px; margin-top: 10px; }
+    #dateline { font-size: 15px; margin-top: 8px; white-space: normal; text-align: center; }
+    #hijri { font-size: 14px; margin-top: 8px; }
+    #nowplaying { font-size: 14px; margin-top: 8px; }
+    #greeting { font-size: 16px; margin-top: 12px; padding: 6px 16px; text-align: center; }
+    #times { flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .card { flex: 1 1 30%; max-width: none; padding: 30px 4px 12px; border-radius: 14px; }
+    .card .icon { height: 30px; }
+    .card .icon svg { width: 28px; height: 28px; }
+    .card .name { font-size: 14px; margin-top: 4px; }
+    .card .time { font-size: 20px; margin-top: 3px; }
+    .card .nowtag { font-size: 11px; top: 7px; padding: 1px 10px 2px; }
+    #menubar { padding: 8px 6px 10px; }
+    #menubar .sep { display: none; }
+    #menubar button { font-size: 14px; padding: 7px 12px; border-width: 2px; }
+    button { font-size: 16px; padding: 10px 16px; border-radius: 10px; }
+    #soundmsg { font-size: 15px; margin-top: 14px; text-align: center; }
+    #playing { font-size: 17px; margin-top: 14px; text-align: center; }
+    #credits { font-size: 11px; margin-top: 16px; }
+    .screen { padding: 16px 12px; }
+    .scr-head { font-size: 21px; margin-bottom: 12px; }
+    .scr-top { margin-bottom: 12px; }
+    .scr-spacer { display: none; }
+    .btn-back { min-width: 0; font-size: 15px; padding: 8px 14px; }
+    .scr-foot { font-size: 13px; margin-top: 10px; }
+    .lrow { font-size: 17px; padding: 11px 12px; white-space: normal; }
+    .lrow .sub { font-size: 14px; }
+    .lhead { font-size: 15px; padding: 16px 12px 6px; }
+    .ayah { margin-bottom: 20px; }
+    .ayah .ar { font-size: 27px; line-height: 1.9; }
+    .ayah .en { font-size: 16px; }
+    .ayah .num { font-size: 15px; }
+    #qplay-status { font-size: 15px; }
+    #btnListen { margin-inline-start: 8px; }
+    #btnReciter { margin-inline-start: 8px; }
+    #salat-pill { font-size: 32px; padding: 22px 24px; }
+  }
+</style>
+</head>
+<body>
+  <div id="bgA" class="bglayer"></div>
+  <div id="bgB" class="bglayer"></div>
+  <div id="bgShade"></div>
+
+  <div id="screen-home">
+    <div id="brand"><img id="brandlogo" src="logo.png" alt=""><h1>NoAds Athan</h1></div>
+    <div id="place">Montr&eacute;al &middot; Canada &middot; ISNA &middot; Asr: <span id="asrlabel">Hanafi</span></div>
+
+    <div id="clock">--:--</div>
+    <div id="dateline"></div>
+    <div id="hijri"></div>
+    <div id="nowplaying"></div>
+    <div id="greeting"></div>
+
+    <div id="times"></div>
+
+    <div id="menubar">
+      <button id="btnPlay" tabindex="1">&#9654; Play Athan</button><span class="sep">&bull;</span>
+      <button id="btnQuran" tabindex="2">Quran</button><span class="sep">&bull;</span>
+      <button id="btnDuas" tabindex="3">Duas</button><span class="sep">&bull;</span>
+      <button id="btnHolidays" tabindex="8">Holidays</button><span class="sep">&bull;</span>
+      <button id="btnLocation" tabindex="6">Location</button><span class="sep">&bull;</span>
+      <button id="btnLang" tabindex="7">Language: English</button><span class="sep">&bull;</span>
+      <button id="btnAdhan" tabindex="4">Adhan: Classic</button><span class="sep">&bull;</span>
+      <button id="btnAsr" tabindex="5">Asr: Hanafi / Shafi'i</button>
+    </div>
+
+    <div id="soundmsg">Tap anywhere to enable athan sound</div>
+    <div id="playing">&#128266; Athan is playing&hellip;</div>
+
+    <div id="credits">Masjid al-Haram photos: Wikimedia Commons (CC BY / CC BY-SA)</div>
+  </div>
+
+  <div id="screen-quran-list" class="screen">
+    <div class="scr-top"><button id="btnBackQList" class="btn-back" tabindex="9">&#8592; Back</button><div class="scr-head" id="headQList">Quran &mdash; choose a surah</div><div class="scr-spacer"></div></div>
+    <div id="qlist" class="listbox"></div>
+    <div class="scr-foot" id="footQList">&#8593;&#8595; choose &middot; &#8592;&#8594; jump &middot; OK open &middot; Back: home</div>
+  </div>
+
+  <div id="screen-quran-read" class="screen">
+    <div class="scr-head" id="qread-title"></div>
+    <div id="qplay-bar">
+      <button id="btnBackQRead" tabindex="10">&#8592; Back</button>
+      <button id="btnListen" tabindex="6">&#9654; Listen &mdash; Mishary Alafasy</button>
+      <button id="btnReciter" tabindex="7">Reciter: Mishary Alafasy</button>
+      <div id="qplay-status"></div>
+    </div>
+    <div id="qread" class="readbox"></div>
+    <div class="scr-foot" id="footQRead">&#8592;&#8594; Back / Listen / Reciter &middot; OK: select &middot; &#8593;&#8595; scroll &middot; Back key: surah list</div>
+  </div>
+
+  <div id="screen-duas-list" class="screen">
+    <div class="scr-top"><button id="btnBackDList" class="btn-back" tabindex="11">&#8592; Back</button><div class="scr-head" id="headDList">Duas &amp; Adhkar</div><div class="scr-spacer"></div></div>
+    <div id="dlist" class="listbox"></div>
+    <div class="scr-foot" id="footDList">&#8593;&#8595; choose &middot; OK open &middot; Back: home</div>
+  </div>
+
+  <div id="screen-dua-read" class="screen">
+    <div class="scr-top"><button id="btnBackDRead" class="btn-back" tabindex="12">&#8592; Back</button><div class="scr-head" id="dread-title"></div><div class="scr-spacer"></div></div>
+    <div id="dread" class="readbox"></div>
+    <div class="scr-foot" id="footDRead">&#8593;&#8595; scroll &middot; Back: duas list</div>
+  </div>
+
+  <div id="screen-holidays" class="screen">
+    <div class="scr-top"><button id="btnBackHol" class="btn-back" tabindex="13">&#8592; Back</button><div class="scr-head" id="headHol">Islamic Holidays &middot; <span id="hol-year"></span></div><div class="scr-spacer"></div></div>
+    <div id="hollist" class="listbox"></div>
+    <div class="scr-foot" id="footHol">Dates follow the calculated Islamic calendar and may differ by a day with the sighting of the moon.</div>
+  </div>
+
+  <div id="screen-location" class="screen">
+    <div class="scr-top"><button id="btnBackLoc" class="btn-back" tabindex="15">&#8592; Back</button><div class="scr-head" id="headLoc">Choose your location</div><div class="scr-spacer"></div></div>
+    <div id="loclist" class="listbox"></div>
+    <div class="scr-foot" id="footLoc">&#8593;&#8595; choose &middot; &#8592;&#8594; jump &middot; OK select &middot; Back: home</div>
+  </div>
+
+  <div id="salat-overlay"><div id="salat-pill"></div></div>
+
+  <audio id="adhan" src="adhan.mp3" preload="auto"></audio>
+  <audio id="salat" src="salat-reminder.mp3" preload="auto"></audio>
+  <audio id="quran-audio" preload="none"></audio>
+
+<script src="praytimes.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var DISPLAY = [0, 1, 2, 3, 5, 6];        // Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha
+  var ATHAN_AT = { 0: 'Fajr', 2: 'Dhuhr', 3: 'Asr', 5: 'Maghrib', 6: 'Isha' }; // not Sunrise
+  var NAMES = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Sunset', 'Maghrib', 'Isha'];
+
+  // Generic salat reminder (shown on screen + spoken at each prayer).
+  var SALAT_MESSAGE = "It's time for Salat!";
+  /* ---------- UI languages (Android build): English / Français / العربية ---------- */
+
+  var SALAT_MESSAGES = {
+    en: "It's time for Salat!",
+    fr: "C\u2019est l\u2019heure de la pri\u00e8re !",
+    ar: "حان وقت الصلاة!"
+  };
+
+  var LANGS = ['en', 'fr', 'ar'];
+  var lang = 'en';
+  try {
+    var savedLang = window.localStorage.getItem('app-lang');
+    if (savedLang === 'fr' || savedLang === 'ar') lang = savedLang;
+  } catch (e) { /* default English */ }
+
+  var PRAYER_NAMES = {
+    en: ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Sunset', 'Maghrib', 'Isha'],
+    fr: ['Fajr', 'Lever du soleil', 'Dhuhr', 'Asr', 'Coucher du soleil', 'Maghrib', 'Isha'],
+    ar: ['الفجر', 'الشروق', 'الظهر', 'العصر', 'الغروب', 'المغرب', 'العشاء']
+  };
+
+  var HIJRI_MONTHS_I18N = {
+    en: ['Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
+      'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', "Sha'ban", 'Ramadan',
+      'Shawwal', "Dhul-Qa'dah", 'Dhul-Hijjah'],
+    fr: ['Mouharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
+      'Joumada al-Awwal', 'Joumada al-Thani', 'Rajab', 'Chaabane', 'Ramadan',
+      'Chawwal', 'Dhou al-Qaada', 'Dhou al-Hijja'],
+    ar: ['محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني',
+      'جمادى الأولى', 'جمادى الثانية', 'رجب', 'شعبان', 'رمضان',
+      'شوال', 'ذو القعدة', 'ذو الحجة']
+  };
+
+  var COUNTRY_I18N = {
+    'Canada': { fr: 'Canada', ar: 'كندا' },
+    'USA': { fr: 'États-Unis', ar: 'الولايات المتحدة' },
+    'Algeria': { fr: 'Algérie', ar: 'الجزائر' },
+    'Morocco': { fr: 'Maroc', ar: 'المغرب' },
+    'Tunisia': { fr: 'Tunisie', ar: 'تونس' },
+    'Egypt': { fr: 'Égypte', ar: 'مصر' },
+    'Saudi Arabia': { fr: 'Arabie saoudite', ar: 'السعودية' },
+    'UAE': { fr: 'Émirats arabes unis', ar: 'الإمارات' },
+    'France': { fr: 'France', ar: 'فرنسا' },
+    'United Kingdom': { fr: 'Royaume-Uni', ar: 'المملكة المتحدة' },
+    'Germany': { fr: 'Allemagne', ar: 'ألمانيا' }
+  };
+
+  var CAT_I18N = {
+    'Morning Adhkar': { fr: 'Adhkar du matin', ar: 'أذكار الصباح' },
+    'Evening Adhkar': { fr: 'Adhkar du soir', ar: 'أذكار المساء' },
+    'After Prayer': { fr: 'Après la prière', ar: 'أذكار بعد الصلاة' },
+    'Daily Duas': { fr: 'Douas du quotidien', ar: 'أدعية يومية' }
+  };
+
+  var ADHAN_NAMES_I18N = {
+    en: ['Classic', 'Makkah', 'Madinah', 'Sabah Fakhry'],
+    fr: ['Classique', 'La Mecque', 'Médine', 'Sabah Fakhry'],
+    ar: ['الكلاسيكي', 'مكة المكرمة', 'المدينة المنورة', 'صباح فخري']
+  };
+
+  var STR = {
+    play_athan: { en: 'Play Athan', fr: 'Écouter l\u2019adhan', ar: 'تشغيل الأذان' },
+    quran_btn: { en: 'Quran', fr: 'Coran', ar: 'القرآن' },
+    duas_btn: { en: 'Duas', fr: 'Douas', ar: 'الأدعية' },
+    holidays_btn: { en: 'Holidays', fr: 'Fêtes', ar: 'المناسبات' },
+    location_btn: { en: 'Location', fr: 'Ville', ar: 'المدينة' },
+    language_label: { en: 'Language: ', fr: 'Langue : ', ar: 'اللغة: ' },
+    language_name: { en: 'English', fr: 'Français', ar: 'العربية' },
+    back: { en: '\u2190 Back', fr: '\u2190 Retour', ar: 'رجوع' },
+    adhan_prefix: { en: 'Adhan: ', fr: 'Adhan : ', ar: 'الأذان: ' },
+    asr_word: { en: 'Asr', fr: 'Asr', ar: 'العصر' },
+    hanafi: { en: 'Hanafi', fr: 'Hanafi', ar: 'حنفي' },
+    shafii: { en: "Shafi'i", fr: "Chafi'i", ar: 'شافعي' },
+    soundmsg: { en: 'Tap anywhere to enable athan sound', fr: 'Touchez l\u2019écran pour activer le son de l\u2019adhan', ar: 'المس الشاشة لتفعيل صوت الأذان' },
+    playing: { en: '\u{1F50A} Athan is playing\u2026', fr: '\u{1F50A} L\u2019adhan est en cours\u2026', ar: '\u{1F50A} الأذان يُذاع الآن\u2026' },
+    credits: { en: 'Masjid al-Haram photos: Wikimedia Commons (CC BY / CC BY-SA)', fr: 'Photos de Masjid al-Haram : Wikimedia Commons (CC BY / CC BY-SA)', ar: 'صور المسجد الحرام: ويكيميديا كومنز (CC BY / CC BY-SA)' },
+    head_qlist: { en: 'Quran \u2014 choose a surah', fr: 'Coran \u2014 choisissez une sourate', ar: 'القرآن — اختر سورة' },
+    head_dlist: { en: 'Duas & Adhkar', fr: 'Douas et Adhkar', ar: 'الأدعية والأذكار' },
+    head_hol: { en: 'Islamic Holidays', fr: 'Fêtes islamiques', ar: 'المناسبات الإسلامية' },
+    head_loc: { en: 'Choose your location', fr: 'Choisissez votre ville', ar: 'اختر مدينتك' },
+    foot_qlist: { en: 'Tap a surah to open it \u00b7 Back: home', fr: 'Touchez une sourate pour l\u2019ouvrir \u00b7 Retour : accueil', ar: 'اضغط على سورة لفتحها · رجوع: الرئيسية' },
+    foot_qread: { en: 'Tap Listen to hear the recitation \u00b7 Back: surah list', fr: 'Touchez Écouter pour la récitation \u00b7 Retour : liste des sourates', ar: 'اضغط «استماع» لتشغيل التلاوة · رجوع: قائمة السور' },
+    foot_dlist: { en: 'Tap a dua to open it \u00b7 Back: home', fr: 'Touchez un doua pour l\u2019ouvrir \u00b7 Retour : accueil', ar: 'اضغط على دعاء لفتحه · رجوع: الرئيسية' },
+    foot_dread: { en: 'Scroll to read \u00b7 Back: duas list', fr: 'Faites défiler pour lire \u00b7 Retour : liste des douas', ar: 'مرّر للقراءة · رجوع: قائمة الأدعية' },
+    foot_hol: { en: 'Dates follow the calculated Islamic calendar and may differ by a day with the sighting of the moon.', fr: 'Les dates suivent le calendrier islamique calculé et peuvent différer d\u2019un jour selon l\u2019observation de la lune.', ar: 'تتبع التواريخ التقويم الهجري الحسابي، وقد تختلف بيوم واحد حسب رؤية الهلال.' },
+    foot_loc: { en: 'Tap your city to select it \u00b7 Back: home', fr: 'Touchez votre ville pour la choisir \u00b7 Retour : accueil', ar: 'اضغط على مدينتك لاختيارها · رجوع: الرئيسية' },
+    loading_quran: { en: 'Loading the Quran\u2026', fr: 'Chargement du Coran\u2026', ar: 'جارٍ تحميل القرآن…' },
+    loading_duas: { en: 'Loading duas\u2026', fr: 'Chargement des douas\u2026', ar: 'جارٍ تحميل الأدعية…' },
+    ayahs_word: { en: 'ayahs', fr: 'versets', ar: 'آية' },
+    surah_word: { en: 'Surah', fr: 'Sourate', ar: 'سورة' },
+    listen: { en: 'Listen', fr: 'Écouter', ar: 'استماع' },
+    pause: { en: 'Pause', fr: 'Pause', ar: 'إيقاف مؤقت' },
+    reciter: { en: 'Reciter', fr: 'Récitant', ar: 'القارئ' },
+    now_playing: { en: 'Now playing', fr: 'Lecture en cours', ar: 'يُشغَّل الآن' },
+    paused: { en: 'Paused', fr: 'En pause', ar: 'موقوف مؤقتًا' },
+    loading: { en: 'Loading\u2026', fr: 'Chargement\u2026', ar: 'جارٍ التحميل…' },
+    audio_error: { en: 'Could not load the audio \u2014 check the internet connection', fr: 'Impossible de charger l\u2019audio \u2014 vérifiez la connexion Internet', ar: 'تعذّر تحميل الصوت — تحقق من اتصال الإنترنت' },
+    current: { en: 'current', fr: 'actuel', ar: 'الحالي' },
+    today_word: { en: 'today', fr: 'aujourd\u2019hui', ar: 'اليوم' },
+    today_prefix: { en: 'Today', fr: 'Aujourd\u2019hui', ar: 'اليوم' },
+    eid_mubarak: { en: 'Eid Mubarak', fr: 'Aïd Moubarak', ar: 'عيد مبارك' },
+    expected_word: { en: 'expected', fr: 'date estimée', ar: 'متوقعة' },
+    next_word: { en: 'Next', fr: 'Prochaine prière', ar: 'الصلاة التالية' },
+    now_tag: { en: 'Now', fr: 'En cours', ar: 'الآن' },
+    at_word: { en: 'at', fr: 'à', ar: 'في' },
+    in_word: { en: 'in', fr: 'dans', ar: 'بعد' },
+    tomorrow_word: { en: 'tomorrow', fr: 'demain', ar: 'غدًا' },
+    ah_suffix: { en: 'AH', fr: 'H', ar: 'هـ' },
+    am: { en: 'AM', fr: 'AM', ar: 'ص' },
+    pm: { en: 'PM', fr: 'PM', ar: 'م' }
+  };
+
+  function t(key) {
+    var e = STR[key];
+    if (!e) return key;
+    return e[lang] || e.en;
+  }
+
+  function LOCALE() {
+    return lang === 'fr' ? 'fr-CA' : (lang === 'ar' ? 'ar-u-nu-latn' : 'en-CA');
+  }
+
+  // Like PrayTimesLib.formatMinutes, but the AM/PM suffix follows the UI language.
+  function fmtMin(mins) {
+    mins = ((mins % 1440) + 1440) % 1440;
+    var h24 = Math.floor(mins / 60), m = mins % 60;
+    var suffix = h24 < 12 ? t('am') : t('pm');
+    var h = h24 % 12; if (h === 0) h = 12;
+    return h + ':' + (m < 10 ? '0' : '') + m + ' ' + suffix;
+  }
+
+  function occName(o) { return lang === 'fr' ? o.nf : (lang === 'ar' ? o.na : o.name); }
+
+  function countryName(en) {
+    var c = COUNTRY_I18N[en];
+    if (!c) return en;
+    return lang === 'fr' ? c.fr : (lang === 'ar' ? c.ar : en);
+  }
+
+  function catTitle(en) {
+    var c = CAT_I18N[en];
+    if (!c) return en;
+    return lang === 'fr' ? c.fr : (lang === 'ar' ? c.ar : en);
+  }
+
+  function adhanName() { return ADHAN_NAMES_I18N[lang][adhanIdx]; }
+
+  function asrName() { return asrFactor === 2 ? t('hanafi') : t('shafii'); }
+
+  function inDaysText(n) {
+    if (lang === 'fr') return 'dans ' + n + (n === 1 ? ' jour' : ' jours');
+    if (lang === 'ar') {
+      if (n === 1) return 'بعد يوم واحد';
+      if (n === 2) return 'بعد يومين';
+      if (n <= 10) return 'بعد ' + n + ' أيام';
+      return 'بعد ' + n + ' يومًا';
+    }
+    return 'in ' + n + (n === 1 ? ' day' : ' days');
+  }
+
+  // Re-render every piece of UI chrome in the current language.
+  function applyLanguage() {
+    NAMES = PRAYER_NAMES[lang];
+    HIJRI_MONTHS = HIJRI_MONTHS_I18N[lang];
+    var rtl = (lang === 'ar');
+    try {
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+    } catch (e) { /* ignore */ }
+    document.body.style.fontFamily = rtl ?
+      '"Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif' : '';
+    btnPlay.innerHTML = '&#9654; ' + t('play_athan');
+    btnQuran.textContent = t('quran_btn');
+    btnDuas.textContent = t('duas_btn');
+    btnHolidays.textContent = t('holidays_btn');
+    btnLocation.textContent = t('location_btn');
+    btnLang.textContent = t('language_label') + t('language_name');
+    btnAsr.textContent = t('asr_word') + ': ' + t('hanafi') + ' / ' + t('shafii');
+    adhanLabel();
+    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc'];
+    for (var bi = 0; bi < bbIds.length; bi++) el(bbIds[bi]).textContent = t('back');
+    el('headQList').textContent = t('head_qlist');
+    el('headDList').textContent = t('head_dlist');
+    el('headLoc').textContent = t('head_loc');
+    el('headHol').innerHTML = t('head_hol') + ' &middot; <span id="hol-year"></span>';
+    el('footQList').textContent = t('foot_qlist');
+    el('footQRead').textContent = t('foot_qread');
+    el('footDList').textContent = t('foot_dlist');
+    el('footDRead').textContent = t('foot_dread');
+    el('footHol').textContent = t('foot_hol');
+    el('footLoc').textContent = t('foot_loc');
+    el('soundmsg').textContent = t('soundmsg');
+    el('playing').textContent = t('playing');
+    el('credits').textContent = t('credits');
+    if (el('salat-overlay').className === 'on') {
+      el('salat-pill').textContent = SALAT_MESSAGES[lang];
+    }
+    updatePlace();
+    setListenUI();
+    if (screen === 'qlist' && quranState === 2) buildQuranList();
+    if (screen === 'dlist' && duasState === 2) buildDuasList();
+    if (screen === 'dread') {
+      var rr = dRows[dSel];
+      if (rr && !rr.head) {
+        el('dread-title').textContent = catTitle(DUAS[rr.cat].title) + ' \u2014 ' +
+          DUAS[rr.cat].items[rr.idx].t;
+      }
+    }
+    if (screen === 'hol') buildHolidays();
+    if (screen === 'loc') buildLocationList();
+    render(new Date());
+  }
+
+
+  /* ---------- Location picker ---------- */
+
+  // Each viewer picks their own city; prayer times, the countdown and
+  // the triggers all follow it, and the choice is remembered in
+  // localStorage ('athan-location'). Coordinates are the standard
+  // published city values; each city carries its regional calculation
+  // method (see METHODS in praytimes.js). The timezone always comes
+  // from the TV's own clock, so a city only "works" when the TV sits
+  // in that city's timezone — the normal case.
+  var CITIES = [
+    { country: 'Canada', cities: [
+      { name: 'Montr\u00e9al', lat: 45.4948, lng: -73.8492, method: 'ISNA' },
+      { name: 'Toronto', lat: 43.6511, lng: -79.3830, method: 'ISNA' },
+      { name: 'Mississauga', lat: 43.5890, lng: -79.6441, method: 'ISNA' },
+      { name: 'Ottawa', lat: 45.4215, lng: -75.6972, method: 'ISNA' },
+      { name: 'Qu\u00e9bec City', lat: 46.8139, lng: -71.2080, method: 'ISNA' },
+      { name: 'Hamilton', lat: 43.2557, lng: -79.8711, method: 'ISNA' },
+      { name: 'Winnipeg', lat: 49.8951, lng: -97.1384, method: 'ISNA' },
+      { name: 'Calgary', lat: 51.0447, lng: -114.0719, method: 'ISNA' },
+      { name: 'Edmonton', lat: 53.5461, lng: -113.4937, method: 'ISNA' },
+      { name: 'Vancouver', lat: 49.2827, lng: -123.1207, method: 'ISNA' }
+    ] },
+    { country: 'USA', cities: [
+      { name: 'New York', lat: 40.7128, lng: -74.0060, method: 'ISNA' },
+      { name: 'Dearborn', lat: 42.3223, lng: -83.1763, method: 'ISNA' },
+      { name: 'Chicago', lat: 41.8781, lng: -87.6298, method: 'ISNA' },
+      { name: 'Houston', lat: 29.7604, lng: -95.3698, method: 'ISNA' },
+      { name: 'Los Angeles', lat: 34.0522, lng: -118.2437, method: 'ISNA' }
+    ] },
+    { country: 'Algeria', cities: [
+      { name: 'Algiers', lat: 36.7538, lng: 3.0588, method: 'MWL' },
+      { name: 'Oran', lat: 35.6969, lng: -0.6331, method: 'MWL' },
+      { name: 'Constantine', lat: 36.3650, lng: 6.6147, method: 'MWL' },
+      { name: 'Annaba', lat: 36.9000, lng: 7.7667, method: 'MWL' },
+      { name: 'Blida', lat: 36.4700, lng: 2.8300, method: 'MWL' },
+      { name: 'Tlemcen', lat: 34.8783, lng: -1.3150, method: 'MWL' }
+    ] },
+    { country: 'Morocco', cities: [
+      { name: 'Casablanca', lat: 33.5731, lng: -7.5898, method: 'MWL' },
+      { name: 'Rabat', lat: 34.0209, lng: -6.8416, method: 'MWL' },
+      { name: 'Marrakech', lat: 31.6295, lng: -7.9811, method: 'MWL' },
+      { name: 'F\u00e8s', lat: 34.0181, lng: -5.0078, method: 'MWL' }
+    ] },
+    { country: 'Tunisia', cities: [
+      { name: 'Tunis', lat: 36.8065, lng: 10.1815, method: 'MWL' },
+      { name: 'Sfax', lat: 34.7406, lng: 10.7603, method: 'MWL' }
+    ] },
+    { country: 'Egypt', cities: [
+      { name: 'Cairo', lat: 30.0444, lng: 31.2357, method: 'EGYPT' },
+      { name: 'Alexandria', lat: 31.2001, lng: 29.9187, method: 'EGYPT' }
+    ] },
+    { country: 'Saudi Arabia', cities: [
+      { name: 'Makkah', lat: 21.4225, lng: 39.8262, method: 'MAKKAH' },
+      { name: 'Madinah', lat: 24.4672, lng: 39.6111, method: 'MAKKAH' },
+      { name: 'Riyadh', lat: 24.7136, lng: 46.6753, method: 'MAKKAH' }
+    ] },
+    { country: 'UAE', cities: [
+      { name: 'Dubai', lat: 25.2048, lng: 55.2708, method: 'MAKKAH' },
+      { name: 'Abu Dhabi', lat: 24.4539, lng: 54.3773, method: 'MAKKAH' }
+    ] },
+    { country: 'France', cities: [
+      { name: 'Paris', lat: 48.8566, lng: 2.3522, method: 'MWL' },
+      { name: 'Marseille', lat: 43.2965, lng: 5.3698, method: 'MWL' },
+      { name: 'Lyon', lat: 45.7640, lng: 4.8357, method: 'MWL' }
+    ] },
+    { country: 'United Kingdom', cities: [
+      { name: 'London', lat: 51.5074, lng: -0.1278, method: 'MWL' }
+    ] },
+    { country: 'Germany', cities: [
+      { name: 'Berlin', lat: 52.5200, lng: 13.4050, method: 'MWL' }
+    ] }
+  ];
+
+  // Flat row model for the location list screen: country headers plus
+  // one row per city, in display order.
+  var locRows = [];
+  (function flattenCities() {
+    for (var g = 0; g < CITIES.length; g++) {
+      locRows.push({ head: true, country: CITIES[g].country });
+      for (var i = 0; i < CITIES[g].cities.length; i++) {
+        var c = CITIES[g].cities[i];
+        locRows.push({ head: false, country: CITIES[g].country,
+                       name: c.name, lat: c.lat, lng: c.lng, method: c.method });
+      }
+    }
+  })();
+
+  function findCityRow(city, country) {
+    for (var i = 0; i < locRows.length; i++) {
+      var r = locRows[i];
+      if (!r.head && r.name === city && r.country === country) return r;
+    }
+    return null;
+  }
+
+  // The selected location: {city, country, lat, lng, method}.
+  // Default: Montréal (its coordinates are the ones this app's times
+  // were verified with), unless a saved choice exists.
+  var loc = { city: 'Montr\u00e9al', country: 'Canada', lat: 45.4948, lng: -73.8492, method: 'ISNA' };
+  try {
+    var savedLoc = JSON.parse(window.localStorage.getItem('athan-location') || 'null');
+    if (savedLoc && typeof savedLoc.lat === 'number' && typeof savedLoc.lng === 'number' &&
+        PrayTimesLib.METHODS[savedLoc.method]) {
+      var row = findCityRow(savedLoc.city, savedLoc.country);
+      if (row) {
+        loc = { city: row.name, country: row.country, lat: row.lat, lng: row.lng, method: row.method };
+      } else {
+        loc = { city: String(savedLoc.city || 'Montr\u00e9al'), country: String(savedLoc.country || ''),
+                lat: savedLoc.lat, lng: savedLoc.lng, method: savedLoc.method };
+      }
+    }
+  } catch (e) { /* default stays Montréal */ }
+
+  // Selectable athan recordings.
+  var ADHAN_FILES = ['adhan.mp3', 'adhan2.mp3', 'adhan3.mp3', 'adhan4.mp3'];
+  var ADHAN_NAMES = ['Classic', 'Makkah', 'Madinah', 'Sabah Fakhry'];
+  var adhanIdx = 0;
+  try {
+    var savedAdhan = parseInt(window.localStorage.getItem('athan-sound'), 10);
+    if (savedAdhan >= 0 && savedAdhan < ADHAN_FILES.length) adhanIdx = savedAdhan;
+  } catch (e) { /* default stays Classic */ }
+
+  var asrFactor = 2; // Hanafi default
+  try {
+    var saved = window.localStorage.getItem('athan-asr');
+    if (saved === '1' || saved === '2') asrFactor = parseInt(saved, 10);
+  } catch (e) { /* localStorage may be unavailable; default stays */ }
+
+  var audio = document.getElementById('adhan');
+  var salatAudio = document.getElementById('salat');
+  var quranAudio = document.getElementById('quran-audio');
+  if (adhanIdx !== 0) audio.src = ADHAN_FILES[adhanIdx];
+  var soundUnlocked = false;
+  var lastPlayedKey = '';
+  var todayKey = '';
+  var todayTimes = null;
+
+  function el(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function dayKey(d) {
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  }
+
+  function refreshTimes(now) {
+    var key = dayKey(now);
+    if (key !== todayKey) {
+      todayKey = key;
+      todayTimes = PrayTimesLib.timesForDate(now, loc.lat, loc.lng, asrFactor, loc.method);
+      lastPlayedKey = '';
+    }
+  }
+
+  // Home header line: "<City> · <Country> · <METHOD> · Asr: <factor>".
+  function updatePlace() {
+    el('place').innerHTML = esc(loc.city) + ' &middot; ' + esc(countryName(loc.country)) +
+      ' &middot; ' + loc.method + ' &middot; ' + t('asr_word') + ': <span id="asrlabel">' +
+      asrName() + '</span>';
+  }
+
+  function fmtClock(d) {
+    var h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+    var suffix = h < 12 ? t('am') : t('pm');
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + ':' + pad(m) + ':' + pad(s) + ' ' + suffix;
+  }
+
+  function fmtCountdown(ms) {
+    var totalSec = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+    if (lang === 'ar') {
+      // Arabic UI: colon-style countdown (02:05:03), Western digits.
+      if (h > 0) return h + ':' + pad(m) + ':' + pad(s);
+      return m + ':' + pad(s);
+    }
+    if (h > 0) return h + 'h ' + pad(m) + 'm ' + pad(s) + 's';
+    return m + 'm ' + pad(s) + 's';
+  }
+
+  // Short countdown for the merged dateline (TV v1.6.0 format): "1:23"
+  // once an hour or more away, "23 min" under an hour; Arabic keeps the
+  // colon style, like fmtCountdown.
+  function fmtShortCountdown(ms) {
+    var totalSec = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+    if (h > 0) return h + ':' + pad(m);
+    if (lang === 'ar') return m + ':' + pad(s);
+    return m + ' min';
+  }
+
+  // Inline SVG stroke icons for the prayer cards (keyed by praytimes
+  // index), drawn in the card's currentColor: crescent, sunrise, sun,
+  // mosque dome, sunset, star. Copied from the TV build (no emoji —
+  // small WebViews render them poorly).
+  function svgIcon(inner) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      inner + '</svg>';
+  }
+  var CARD_ICONS = {
+    0: svgIcon('<path d="M20 13.6A8.6 8.6 0 1 1 10.4 4 7 7 0 0 0 20 13.6Z"/>'),
+    1: svgIcon('<path d="M6.5 17a5.5 5.5 0 0 1 11 0"/>' +
+               '<line x1="12" y1="3.2" x2="12" y2="7"/>' +
+               '<polyline points="9.6 5.4 12 3 14.4 5.4"/>' +
+               '<line x1="4" y1="13.5" x2="6" y2="13.5"/>' +
+               '<line x1="18" y1="13.5" x2="20" y2="13.5"/>' +
+               '<line x1="2.5" y1="17" x2="21.5" y2="17"/>' +
+               '<line x1="5" y1="20.5" x2="19" y2="20.5"/>'),
+    2: svgIcon('<circle cx="12" cy="12" r="4.4"/>' +
+               '<line x1="12" y1="2.5" x2="12" y2="5"/>' +
+               '<line x1="12" y1="19" x2="12" y2="21.5"/>' +
+               '<line x1="2.5" y1="12" x2="5" y2="12"/>' +
+               '<line x1="19" y1="12" x2="21.5" y2="12"/>' +
+               '<line x1="5.2" y1="5.2" x2="7" y2="7"/>' +
+               '<line x1="17" y1="17" x2="18.8" y2="18.8"/>' +
+               '<line x1="5.2" y1="18.8" x2="7" y2="17"/>' +
+               '<line x1="17" y1="7" x2="18.8" y2="5.2"/>'),
+    3: svgIcon('<path d="M12 5.2c2.3 1.9 4.6 3.8 4.6 6.6H7.4c0-2.8 2.3-4.7 4.6-6.6Z"/>' +
+               '<line x1="12" y1="2.4" x2="12" y2="5.2"/>' +
+               '<line x1="5.4" y1="11.8" x2="5.4" y2="20.5"/>' +
+               '<line x1="18.6" y1="11.8" x2="18.6" y2="20.5"/>' +
+               '<line x1="3" y1="20.5" x2="21" y2="20.5"/>'),
+    5: svgIcon('<path d="M6.5 17a5.5 5.5 0 0 1 11 0"/>' +
+               '<line x1="12" y1="3" x2="12" y2="7.4"/>' +
+               '<polyline points="9.6 5.4 12 7.8 14.4 5.4"/>' +
+               '<line x1="4" y1="13.5" x2="6" y2="13.5"/>' +
+               '<line x1="18" y1="13.5" x2="20" y2="13.5"/>' +
+               '<line x1="2.5" y1="17" x2="21.5" y2="17"/>' +
+               '<line x1="5" y1="20.5" x2="19" y2="20.5"/>'),
+    6: svgIcon('<path d="M12 3.2l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.7l-5.2 2.7 1-5.9L3.5 9.4l5.9-.8Z"/>')
+  };
+
+  /* ---------- Islamic calendar (tabular / Kuwaiti arithmetic) ---------- */
+
+  /* ===TABULAR-ISLAMIC-BEGIN=== */
+  // Pure integer day-count conversions, no network. The Islamic side is
+  // the standard tabular (arithmetic) calendar: a 30-year cycle with 11
+  // leap years, civil epoch 1 Muharram 1 AH = Julian Day Number 1948440.
+  // islamicToJd defines the calendar; jdToIslamic inverts it exactly.
+  function gregToJd(y, m, d) {
+    var a = Math.floor((14 - m) / 12);
+    var y2 = y + 4800 - a;
+    var m2 = m + 12 * a - 3;
+    return d + Math.floor((153 * m2 + 2) / 5) + 365 * y2 +
+      Math.floor(y2 / 4) - Math.floor(y2 / 100) + Math.floor(y2 / 400) - 32045;
+  }
+
+  function jdToGreg(jd) {
+    var a = jd + 32044;
+    var b = Math.floor((4 * a + 3) / 146097);
+    var c = a - Math.floor((146097 * b) / 4);
+    var d2 = Math.floor((4 * c + 3) / 1461);
+    var e = c - Math.floor((1461 * d2) / 4);
+    var m = Math.floor((5 * e + 2) / 153);
+    return {
+      year: 100 * b + d2 - 4800 + Math.floor(m / 10),
+      month: m + 3 - 12 * Math.floor(m / 10),
+      day: e - Math.floor((153 * m + 2) / 5) + 1
+    };
+  }
+
+  function islamicToJd(y, m, d) {
+    return d + Math.ceil(29.5 * (m - 1)) + (y - 1) * 354 +
+      Math.floor((3 + 11 * y) / 30) + 1948439;
+  }
+
+  function jdToIslamic(jd) {
+    var y = Math.floor(30 * (jd - 1948440) / 10631) + 1;
+    while (islamicToJd(y + 1, 1, 1) <= jd) y++;
+    while (islamicToJd(y, 1, 1) > jd) y--;
+    var m = 1;
+    while (m < 12 && islamicToJd(y, m + 1, 1) <= jd) m++;
+    return { year: y, month: m, day: jd - islamicToJd(y, m, 1) + 1 };
+  }
+
+  var HIJRI_MONTHS = ['Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
+    'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', "Sha'ban", 'Ramadan',
+    'Shawwal', "Dhul-Qa'dah", 'Dhul-Hijjah'];
+
+  var OCCASIONS = [
+    { m: 1, d: 1, name: 'Islamic New Year', nf: 'Nouvel An islamique', na: 'رأس السنة الهجرية' },
+    { m: 1, d: 10, name: 'Day of Ashura', nf: 'Jour de l’Achoura', na: 'يوم عاشوراء' },
+    { m: 3, d: 12, name: 'Mawlid an-Nabi', nf: 'Mawlid an-Nabi', na: 'المولد النبوي' },
+    { m: 7, d: 27, name: "Isra and Mi'raj", nf: 'Isra et Mi’raj', na: 'الإسراء والمعراج' },
+    { m: 8, d: 15, name: "Mid-Sha'ban", nf: 'Mi-Chaabane', na: 'ليلة النصف من شعبان' },
+    { m: 9, d: 1, name: 'First day of Ramadan', nf: 'Premier jour du Ramadan', na: 'أول أيام رمضان' },
+    { m: 9, d: 27, name: 'Laylat al-Qadr', nf: 'Laylat al-Qadr (Nuit du Destin)', na: 'ليلة القدر', note: 'expected' },
+    { m: 10, d: 1, name: 'Eid al-Fitr', nf: 'Aïd al-Fitr', na: 'عيد الفطر', eid: true },
+    { m: 12, d: 9, name: 'Day of Arafah', nf: 'Jour d’Arafat', na: 'يوم عرفة' },
+    { m: 12, d: 10, name: 'Eid al-Adha', nf: 'Aïd al-Adha', na: 'عيد الأضحى', eid: true }
+  ];
+  /* ===TABULAR-ISLAMIC-END=== */
+
+  function occasionOn(hMonth, hDay) {
+    for (var i = 0; i < OCCASIONS.length; i++) {
+      if (OCCASIONS[i].m === hMonth && OCCASIONS[i].d === hDay) return OCCASIONS[i];
+    }
+    return null;
+  }
+
+  function render(now) {
+    refreshTimes(now);
+    el('clock').textContent = fmtClock(now);
+    // The dateline is built below, once the next prayer is known: it is
+    // the merged TV v1.6.0 line (short date • city • next + countdown).
+    var hjNow = jdToIslamic(gregToJd(now.getFullYear(), now.getMonth() + 1, now.getDate()));
+    el('hijri').textContent = hjNow.day + ' ' + HIJRI_MONTHS[hjNow.month - 1] + ' ' + hjNow.year + ' ' + t('ah_suffix');
+    var occToday = occasionOn(hjNow.month, hjNow.day);
+    if (occToday) {
+      el('greeting').textContent = occToday.eid ?
+        t('eid_mubarak') + ' \u2014 ' + occName(occToday) + ' ' + t('today_word') :
+        t('today_prefix') + ': ' + occName(occToday);
+      el('greeting').style.display = 'block';
+    } else {
+      el('greeting').style.display = 'none';
+    }
+    el('asrlabel').textContent = asrName();
+
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+    var nowMs = nowMin * 60000 + now.getSeconds() * 1000 + now.getMilliseconds();
+
+    // next event among today's six displayed times
+    var nextIdx = -1, i, idx;
+    for (i = 0; i < DISPLAY.length; i++) {
+      idx = DISPLAY[i];
+      if (todayTimes[idx] * 60000 > nowMs) { nextIdx = idx; break; }
+    }
+
+    // Prayer currently in effect: the most recently passed of the five
+    // athan prayers (Sunrise never takes the gold "Now" card).
+    var goldIdx = -1;
+    for (var ak in ATHAN_AT) {
+      if (!ATHAN_AT.hasOwnProperty(ak)) continue;
+      var ai = parseInt(ak, 10);
+      if (todayTimes[ai] <= nowMin &&
+          (goldIdx < 0 || todayTimes[ai] > todayTimes[goldIdx])) goldIdx = ai;
+    }
+
+    // Merged dateline (TV v1.6.0): short date, selected city, next
+    // prayer and its countdown on one line, all localized.
+    var nextName, nextDiff;
+    if (nextIdx >= 0) {
+      nextName = NAMES[nextIdx];
+      nextDiff = todayTimes[nextIdx] * 60000 - nowMs;
+    } else {
+      // all of today's times passed: next is tomorrow's Fajr
+      var tomorrow = new Date(now.getTime() + 86400000);
+      var tTimes = PrayTimesLib.timesForDate(tomorrow, loc.lat, loc.lng, asrFactor, loc.method);
+      nextName = NAMES[0];
+      nextDiff = (1440 + tTimes[0]) * 60000 - nowMs;
+    }
+    el('dateline').textContent =
+      now.toLocaleDateString(LOCALE(), { weekday: 'short', month: 'short', day: 'numeric' }) +
+      ' \u2022 ' + loc.city + ' \u2022 ' +
+      nextName + ' ' + t('in_word') + ' ' + fmtShortCountdown(nextDiff);
+
+    // build cards
+    var html = '';
+    for (i = 0; i < DISPLAY.length; i++) {
+      idx = DISPLAY[i];
+      var cls = 'card';
+      if (idx === goldIdx) cls += ' now-card';
+      else if (idx === nextIdx) cls += ' next-prayer';
+      html += '<div class="' + cls + '">' +
+              (idx === goldIdx ? '<div class="nowtag">' + t('now_tag') + '</div>' : '') +
+              '<div class="icon">' + CARD_ICONS[idx] + '</div>' +
+              '<div class="name">' + NAMES[idx] +
+              '</div><div class="time">' + fmtMin(todayTimes[idx]) +
+              '</div></div>';
+    }
+    el('times').innerHTML = html;
+  }
+
+  function showPlaying(show) {
+    el('playing').style.display = show ? 'block' : 'none';
+  }
+
+  // Plays the currently selected athan recording (and nothing else).
+  function playAthan() {
+    try {
+      audio.currentTime = 0;
+    } catch (e) { /* ignore */ }
+    var p = audio.play();
+    if (p && typeof p.then === 'function') {
+      p.then(function () {
+        soundUnlocked = true;
+        el('soundmsg').style.display = 'none';
+        showPlaying(true);
+      }).catch(function () {
+        // Autoplay with sound blocked until first interaction.
+        el('soundmsg').style.display = 'block';
+      });
+    } else {
+      soundUnlocked = true;
+      showPlaying(true);
+    }
+  }
+
+  audio.addEventListener('ended', function () { showPlaying(false); });
+  audio.addEventListener('pause', function () { showPlaying(false); });
+
+  /* ---------- Salat reminder (visual overlay) ---------- */
+
+  var salatKey = '';        // prayer-instance key currently shown
+  var salatUntil = 0;       // epoch ms: hide the message after this
+  var salatDismissed = '';  // prayer-instance key dismissed by the user
+
+  function showSalatMessage() {
+    el('salat-pill').textContent = SALAT_MESSAGES[lang];
+    el('salat-overlay').className = 'on';
+    salatUntil = Date.now() + 10 * 60 * 1000;
+  }
+
+  function hideSalatMessage() {
+    el('salat-overlay').className = '';
+    salatUntil = 0;
+  }
+
+  /* ---------- Central Back-key handling (v1.5.0 fix) ---------- */
+
+  // webOS applies its default Back action (the exit prompt) whenever a
+  // keydown for the remote's Back key (461) finishes dispatch without
+  // preventDefault(). The old code handled 461 only inside per-screen
+  // branches of one bubble-phase listener — and the home branch had no
+  // 461 case at all — so any Back press that missed a branch reached the
+  // system unhandled and offered to exit the app. This capture-phase
+  // listener is registered before every other key handler and ALWAYS
+  // consumes 461: the salat overlay gets first claim (one press
+  // dismisses it), otherwise the press moves exactly one level up (see
+  // goBack); on the home screen it is a harmless no-op that simply keeps
+  // the app open.
+  document.addEventListener('keydown', function (ev) {
+    var k = ev.keyCode || ev.which;
+    if (k !== 461) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    unlock(); // Back used to reach the any-key unlock listener too; keep that
+    if (el('salat-overlay').className === 'on') {
+      salatDismissed = salatKey;
+      hideSalatMessage();
+      return;
+    }
+    goBack();
+  }, true);
+
+  // Android: the native shell forwards the system Back button as an
+  // 'androidback' event; it behaves exactly like the remote's Back key.
+  document.addEventListener('androidback', function () {
+    if (el('salat-overlay').className === 'on') {
+      salatDismissed = salatKey;
+      hideSalatMessage();
+      return;
+    }
+    goBack();
+  });
+
+  // Key of the prayer whose 10-minute window contains 'now', or ''.
+  function salatWindowKey(now) {
+    refreshTimes(now);
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+    for (var idx in ATHAN_AT) {
+      if (!ATHAN_AT.hasOwnProperty(idx)) continue;
+      var diff = nowMin - todayTimes[idx];
+      if (diff >= 0 && diff < 10) return todayKey + ':' + idx;
+    }
+    return '';
+  }
+
+  function salatTick(now) {
+    var key = salatWindowKey(now);
+    var shown = el('salat-overlay').className === 'on';
+    if (key && key !== salatDismissed && (!shown || salatKey !== key)) {
+      salatKey = key;
+      showSalatMessage();
+    }
+    if (el('salat-overlay').className === 'on' && Date.now() > salatUntil) {
+      hideSalatMessage();
+    }
+  }
+
+  /* ---------- Prayer-time trigger: message + voice reminder + athan ---------- */
+
+  // Plays the spoken salat reminder, then the selected athan when it ends.
+  // If the reminder's play() is rejected (autoplay policy), onBlocked runs
+  // instead and this chain does NOT start the athan.
+  function startReminderThenAthan(onBlocked) {
+    var started = false;
+    var blocked = false;
+    function startAthan() {
+      if (!started && !blocked) { started = true; playAthan(); }
+    }
+    salatAudio.onended = startAthan;
+    salatAudio.onerror = function () { if (!blocked) startAthan(); };
+    try { salatAudio.currentTime = 0; } catch (e) { /* ignore */ }
+    var p = null;
+    try { p = salatAudio.play(); } catch (e) { blocked = true; if (onBlocked) onBlocked(); }
+    if (p && typeof p.then === 'function') {
+      p.then(function () {
+        // The reminder is playing, so audio output is allowed after all.
+        soundUnlocked = true;
+        el('soundmsg').style.display = 'none';
+      }, function () {
+        blocked = true;
+        if (onBlocked) onBlocked();
+      });
+    }
+    // Safety net: never let the reminder block the athan.
+    setTimeout(startAthan, 20000);
+  }
+
+  function triggerPrayer() {
+    stopQuranAudio(); // prayer time takes over the audio from any recitation
+    showSalatMessage();
+    if (!soundUnlocked) {
+      // Keep the original behaviour: attempt the athan (it will be blocked
+      // until the first remote press, which also unlocks the sound).
+      playAthan();
+      return;
+    }
+    // Sound is unlocked: speak the salat reminder first, then the athan.
+    // If the reminder somehow fails, fall back to the athan directly,
+    // exactly as before.
+    startReminderThenAthan(function () { playAthan(); });
+  }
+
+  function checkAthan(now) {
+    refreshTimes(now);
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+    for (var idx in ATHAN_AT) {
+      if (!ATHAN_AT.hasOwnProperty(idx)) continue;
+      if (todayTimes[idx] === nowMin) {
+        var key = todayKey + ':' + idx;
+        if (lastPlayedKey !== key) {
+          lastPlayedKey = key;
+          salatKey = key;
+          triggerPrayer();
+        }
+      }
+    }
+  }
+
+  // First interaction unlocks audio on webOS/browser engines: pressing any
+  // remote key counts, so the athan can play automatically afterwards.
+  function unlock() {
+    if (soundUnlocked) return;
+    // A play+pause in a user-gesture handler unlocks the element.
+    var p = audio.play();
+    if (p && typeof p.then === 'function') {
+      p.then(function () {
+        audio.pause();
+        try { audio.currentTime = 0; } catch (e) { /* ignore */ }
+        soundUnlocked = true;
+        el('soundmsg').style.display = 'none';
+        runPendingAutoAthan();
+      }).catch(function () {
+        el('soundmsg').style.display = 'block';
+      });
+    } else {
+      soundUnlocked = true;
+      runPendingAutoAthan();
+    }
+  }
+
+  // If the background service launched us for a prayer but autoplay was
+  // blocked, the first successful unlock runs the reminder + athan chain.
+  function runPendingAutoAthan() {
+    if (pendingAutoAthan) {
+      pendingAutoAthan = false;
+      startReminderThenAthan(function () { playAthan(); });
+    }
+  }
+  document.addEventListener('keydown', unlock);
+  document.addEventListener('click', unlock);
+
+  /* ---------- Haram photo slideshow ---------- */
+
+  var BG_FILES = ['bg1.jpg', 'bg2.jpg', 'bg3.jpg', 'bg4.jpg', 'bg5.jpg'];
+  var bgIdx = 0, bgFront = 0; // bgFront: 0 = bgA visible, 1 = bgB visible
+  (function initBg() {
+    var a = el('bgA'), b = el('bgB'), i, img;
+    a.style.backgroundImage = 'url("bg1.jpg")';
+    a.style.opacity = '1';
+    b.style.opacity = '0';
+    for (i = 0; i < BG_FILES.length; i++) { img = new Image(); img.src = BG_FILES[i]; }
+    setInterval(function () {
+      var next = (bgIdx + 1) % BG_FILES.length;
+      var showDiv = bgFront === 0 ? el('bgB') : el('bgA');
+      var hideDiv = bgFront === 0 ? el('bgA') : el('bgB');
+      showDiv.style.backgroundImage = 'url("' + BG_FILES[next] + '")';
+      showDiv.style.opacity = '1';
+      hideDiv.style.opacity = '0';
+      bgFront = 1 - bgFront;
+      bgIdx = next;
+    }, 15000);
+  })();
+
+  /* ---------- Screens ---------- */
+
+  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc
+  window.__appScreen = 'home';
+  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location' };
+
+  var btnPlay = el('btnPlay');
+  var btnQuran = el('btnQuran');
+  var btnDuas = el('btnDuas');
+  var btnHolidays = el('btnHolidays');
+  var btnLocation = el('btnLocation');
+  var btnAdhan = el('btnAdhan');
+  var btnAsr = el('btnAsr');
+  var btnLang = el('btnLang');
+  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnLocation, btnAdhan, btnAsr, btnLang];
+
+  function showScreen(name) {
+    screen = name;
+    window.__appScreen = name; // read by the Android shell's Back handling
+    el('screen-home').style.display = (name === 'home') ? '' : 'none';
+    for (var k in SCREEN_IDS) {
+      el(SCREEN_IDS[k]).className = 'screen' + (k === name ? ' on' : '');
+    }
+    if (name === 'home') {
+      try { btnPlay.focus(); } catch (e) { /* ignore */ }
+    } else if (document.activeElement && document.activeElement.blur) {
+      try { document.activeElement.blur(); } catch (e) { /* ignore */ }
+    }
+  }
+
+  // One level up from the current screen — the single navigation step
+  // performed by the Back key (central handler) and by every sub-screen's
+  // visible "← Back" button, and by nothing else.
+  // v1.2.0 (TV v1.6.1): navigation NEVER stops the Quran recitation.
+  // The audio element is global, so playback (and auto-advance)
+  // continues while the user returns to the surah list or the home
+  // screen; the Listen button in the reading view is the play/pause
+  // control, and a prayer time still preempts via stopQuranAudio() in
+  // the athan triggers.
+  function goBack() {
+    if (screen === 'qread') { showScreen('qlist'); }
+    else if (screen === 'qlist') { showScreen('home'); }
+    else if (screen === 'dread') { showScreen('dlist'); }
+    else if (screen === 'dlist') { showScreen('home'); }
+    else if (screen === 'hol') { showScreen('home'); }
+    else if (screen === 'loc') { showScreen('home'); }
+    // home: stay — Back on the home screen never leaves the app.
+  }
+
+  function loadScript(src, cb) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = cb;
+    s.onerror = cb;
+    document.body.appendChild(s);
+  }
+
+  function keepVisible(box, row) {
+    if (!row) return;
+    var rt = row.offsetTop, rb = rt + row.offsetHeight;
+    if (rt < box.scrollTop) box.scrollTop = rt;
+    else if (rb > box.scrollTop + box.clientHeight) box.scrollTop = rb - box.clientHeight;
+  }
+
+  /* ---------- Quran ---------- */
+
+  var quranState = 0; // 0 not loaded, 1 loading, 2 ready
+  var qSel = 0;
+
+  function qHighlight() {
+    var box = el('qlist'), rows = box.children, i;
+    for (i = 0; i < rows.length; i++) {
+      rows[i].className = 'lrow' + (i === qSel ? ' hl' : '');
+    }
+    keepVisible(box, rows[qSel]);
+  }
+
+  function buildQuranList() {
+    var html = '', i, s;
+    for (i = 0; i < QURAN.length; i++) {
+      s = QURAN[i];
+      html += '<div class="lrow">' + s.n + '. ' + esc(s.en_name) +
+              '  <span class="sub">' + esc(s.ar_name) + ' &middot; ' + s.ayahs.length + ' ' + t('ayahs_word') + '</span></div>';
+    }
+    el('qlist').innerHTML = html;
+    qHighlight();
+  }
+
+  function openSurah(i) {
+    qCur = i;
+    var s = QURAN[i], html = '', j;
+    el('qread-title').textContent = s.n + '. ' + s.en_name + ' — ' + s.ar_name;
+    for (j = 0; j < s.ayahs.length; j++) {
+      html += '<div class="ayah"><div class="ar" dir="rtl">' + esc(s.ayahs[j].a) +
+              ' <span class="num">(' + (j + 1) + ')</span></div>' +
+              '<div class="en">' + (j + 1) + '. ' + esc(s.ayahs[j].e) + '</div></div>';
+    }
+    var box = el('qread');
+    box.innerHTML = html;
+    box.scrollTop = 0;
+    showScreen('qread');
+    setListenFocus(true); // remote starts on the Listen button
+    setListenUI();
+  }
+
+  function openQuran() {
+    showScreen('qlist');
+    if (quranState === 2) { buildQuranList(); return; }
+    if (quranState === 0) {
+      quranState = 1;
+      el('qlist').innerHTML = '<div class="lrow">' + t('loading_quran') + '</div>';
+      loadScript('quran-data.js', function () {
+        quranState = 2;
+        if (screen === 'qlist') buildQuranList();
+      });
+    }
+  }
+
+  /* ---------- Quran audio (streamed recitation, selectable reciter) ---------- */
+
+  // Streamed per-surah MP3s from the mp3quran CDN — nothing is embedded,
+  // so the package stays small; the TV plays them over its Wi-Fi.
+  // (The AlQuran Cloud CDN files for ar.alafasy turned out to be short
+  // fragments, so the full-length mp3quran files are used instead.)
+  // Each base is that reciter's Hafs Murattal mushaf directory, taken from
+  // the official mp3quran API and verified complete (full Al-Fatiha
+  // download + ffprobe) before inclusion.
+  var RECITERS = [
+    { name: 'Mishary Alafasy', base: 'https://cdn.mp3quran.net/audio/mishary-alafasy/r1/' },
+    { name: 'Saad Al-Ghamdi', base: 'https://cdn.mp3quran.net/audio/saad-ghamdi/r1/' },
+    { name: 'Maher Al-Muaiqly', base: 'https://cdn.mp3quran.net/audio/maher-muaiqly/r1/' },
+    { name: 'Mahmoud Khalil Al-Husary', base: 'https://cdn.mp3quran.net/audio/mahmoud-husary/r1/' },
+    { name: 'Mohamed Siddiq El-Minshawi', base: 'https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/' },
+    { name: 'Abdul Basit Abd us-Samad', base: 'https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r3/' }
+  ];
+  var reciterIdx = 0;
+  try {
+    var savedReciter = parseInt(window.localStorage.getItem('quran-reciter'), 10);
+    if (savedReciter >= 0 && savedReciter < RECITERS.length) reciterIdx = savedReciter;
+  } catch (e) { /* default stays Alafasy */ }
+
+  var qCur = -1;           // QURAN[] index open in the reading view
+  var qLoadedSurah = 0;    // surah number loaded in the player (0 = none)
+  var qPlayState = 'idle'; // idle | loading | playing | paused | error
+  var qListenFocus = false; // reading view: remote focus is on Listen button
+  var qReciterFocus = false; // reading view: remote focus is on Reciter button
+  var qBackFocus = false; // reading view: remote focus is on the Back button
+
+  function quranAudioUrl(n) {
+    var s = String(n);
+    while (s.length < 3) s = '0' + s;
+    return RECITERS[reciterIdx].base + s + '.mp3';
+  }
+
+  function reciterName() { return RECITERS[reciterIdx].name; }
+
+  function qSurahName(n) {
+    if (typeof QURAN !== 'undefined' && QURAN[n - 1]) return QURAN[n - 1].en_name;
+    return t('surah_word') + ' ' + n;
+  }
+
+  // Home-screen now-playing pill (TV v1.6.1): visible only while a
+  // recitation is actively playing, so after going Back home the user
+  // can see what is still playing. Called from setListenUI(), which
+  // every playback-state transition already passes through (start,
+  // pause, resume, reciter change, auto-advance, 'ended', athan
+  // preemption), so the pill is always in sync with the player.
+  function updateNowPlaying() {
+    var pill = el('nowplaying');
+    if (!pill) return;
+    if (qPlayState === 'playing' && qLoadedSurah > 0) {
+      pill.textContent = '\u266A ' + qSurahName(qLoadedSurah) + ' \u2014 ' + reciterName();
+      pill.style.display = 'block';
+    } else {
+      pill.style.display = 'none';
+    }
+  }
+
+  function setListenUI() {
+    var btn = el('btnListen'), st = el('qplay-status'), rb = el('btnReciter');
+    if (!btn || !st) return;
+    if (rb) rb.textContent = t('reciter') + ': ' + reciterName();
+    if (qPlayState === 'playing' || qPlayState === 'loading') {
+      btn.innerHTML = '&#10074;&#10074; ' + t('pause');
+    } else {
+      btn.innerHTML = '&#9654; ' + t('listen') + ' &mdash; ' + reciterName();
+    }
+    st.className = '';
+    if (qPlayState === 'loading') {
+      st.textContent = t('loading');
+    } else if (qPlayState === 'playing') {
+      st.textContent = t('now_playing') + ': ' + qSurahName(qLoadedSurah) + ' \u2014 ' + reciterName();
+    } else if (qPlayState === 'paused') {
+      st.textContent = t('paused') + ': ' + qSurahName(qLoadedSurah) + ' \u2014 ' + reciterName();
+    } else if (qPlayState === 'error') {
+      st.textContent = t('audio_error');
+      st.className = 'err';
+    } else {
+      st.textContent = '';
+    }
+    updateNowPlaying();
+  }
+
+  // Reading-view header focus: 'back' | 'listen' | 'reciter' | 'none' (text).
+  function setQBarFocus(which) {
+    qBackFocus = (which === 'back');
+    qListenFocus = (which === 'listen');
+    qReciterFocus = (which === 'reciter');
+    var bb = el('btnBackQRead'), lb = el('btnListen'), rb = el('btnReciter');
+    try {
+      if (which === 'back') bb.focus();
+      else if (which === 'listen') lb.focus();
+      else if (which === 'reciter') rb.focus();
+      else if (document.activeElement === bb || document.activeElement === lb ||
+               document.activeElement === rb) {
+        document.activeElement.blur();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function setListenFocus(on) { setQBarFocus(on ? 'listen' : 'none'); }
+  function setReciterFocus(on) { setQBarFocus(on ? 'reciter' : 'none'); }
+
+  function qPlay() {
+    var p = null;
+    try { p = quranAudio.play(); } catch (e) { /* ignore */ }
+    if (p && typeof p.then === 'function') {
+      p.then(function () { /* the 'playing' event updates the UI */ }, function () {
+        if (qPlayState === 'loading') { qPlayState = 'error'; setListenUI(); }
+      });
+    }
+  }
+
+  function startQuranAudio(n) {
+    qLoadedSurah = n;
+    qPlayState = 'loading';
+    try {
+      quranAudio.src = quranAudioUrl(n);
+      quranAudio.load();
+    } catch (e) { /* ignore */ }
+    setListenUI();
+    qPlay();
+  }
+
+  function toggleQuranAudio() {
+    if (qCur < 0 || typeof QURAN === 'undefined') return;
+    var n = QURAN[qCur].n;
+    if (qPlayState === 'playing' || qPlayState === 'loading') {
+      try { quranAudio.pause(); } catch (e) { /* ignore */ }
+      qPlayState = 'paused';
+      setListenUI();
+      return;
+    }
+    if (qPlayState === 'paused' && qLoadedSurah === n) {
+      qPlayState = 'loading';
+      setListenUI();
+      qPlay();
+      return;
+    }
+    startQuranAudio(n);
+  }
+
+  // OK on the Reciter button: move to the next reciter and remember the
+  // choice. If a surah is loaded in the player, reload the same surah from
+  // the new reciter — keep playing if it was playing, stay paused if it
+  // was paused. A failed stream surfaces through the normal error status;
+  // there is no silent fallback to another reciter.
+  function cycleReciter() {
+    reciterIdx = (reciterIdx + 1) % RECITERS.length;
+    try { window.localStorage.setItem('quran-reciter', String(reciterIdx)); } catch (e) { /* ignore */ }
+    if (qLoadedSurah > 0 &&
+        (qPlayState === 'playing' || qPlayState === 'loading' || qPlayState === 'paused')) {
+      var wasPlaying = (qPlayState === 'playing' || qPlayState === 'loading');
+      qPlayState = 'loading';
+      try {
+        quranAudio.src = quranAudioUrl(qLoadedSurah);
+        quranAudio.load();
+      } catch (e) { /* ignore */ }
+      if (wasPlaying) {
+        setListenUI();
+        qPlay();
+      } else {
+        qPlayState = 'paused';
+        setListenUI();
+      }
+      return;
+    }
+    setListenUI();
+  }
+
+  function stopQuranAudio() {
+    if (qPlayState === 'idle' && qLoadedSurah === 0) { setListenUI(); return; }
+    try { quranAudio.pause(); } catch (e) { /* ignore */ }
+    qPlayState = 'idle';
+    qLoadedSurah = 0;
+    try {
+      quranAudio.removeAttribute('src');
+      quranAudio.load();
+    } catch (e) { /* ignore */ }
+    setListenUI();
+  }
+
+  quranAudio.addEventListener('playing', function () {
+    qPlayState = 'playing';
+    setListenUI();
+  });
+  quranAudio.addEventListener('canplay', function () {
+    if (qPlayState === 'loading') { qPlayState = 'playing'; setListenUI(); }
+  });
+  quranAudio.addEventListener('waiting', function () {
+    if (qPlayState === 'playing') el('qplay-status').textContent = t('loading');
+  });
+  quranAudio.addEventListener('pause', function () {
+    // Fires for user pauses; right before 'ended' on some engines, the
+    // ended flag is already set, so a finished surah is not marked paused.
+    if (qPlayState === 'playing' && !quranAudio.ended) {
+      qPlayState = 'paused';
+      setListenUI();
+    }
+  });
+  quranAudio.addEventListener('error', function () {
+    if (qLoadedSurah > 0 && qPlayState !== 'idle') {
+      qPlayState = 'error';
+      setListenUI();
+    }
+  });
+  quranAudio.addEventListener('ended', function () {
+    var finished = qLoadedSurah;
+    if (finished >= 1 && finished < 114 && screen === 'qread') {
+      // Auto-advance: show the next surah's text and keep playing.
+      openSurah(finished); // QURAN index of surah (finished + 1)
+      startQuranAudio(finished + 1);
+    } else {
+      qPlayState = 'idle';
+      qLoadedSurah = 0;
+      setListenUI();
+    }
+  });
+
+  /* ---------- Duas & Adhkar ---------- */
+
+  var duasState = 0;
+  var dRows = [];  // parallel to #dlist children: {head:true} or {head:false, cat, idx}
+  var dSel = 0;    // index into dRows of the highlighted row
+  var dFirst = 0;  // first selectable row (Up from here focuses the Back button)
+
+  function dHighlight() {
+    var box = el('dlist'), rows = box.children, i;
+    for (i = 0; i < rows.length; i++) {
+      if (rows[i].className.indexOf('lrow') === 0) {
+        rows[i].className = 'lrow' + (i === dSel ? ' hl' : '');
+      }
+    }
+    keepVisible(box, rows[dSel]);
+  }
+
+  function buildDuasList() {
+    var html = '', c, i;
+    dRows = [];
+    for (c = 0; c < DUAS.length; c++) {
+      html += '<div class="lhead">' + esc(catTitle(DUAS[c].title)) + '</div>';
+      dRows.push({ head: true });
+      for (i = 0; i < DUAS[c].items.length; i++) {
+        html += '<div class="lrow">' + esc(DUAS[c].items[i].t) + '</div>';
+        dRows.push({ head: false, cat: c, idx: i });
+      }
+    }
+    el('dlist').innerHTML = html;
+    dSel = 0;
+    while (dSel < dRows.length && dRows[dSel].head) dSel++;
+    dFirst = dSel;
+    dHighlight();
+  }
+
+  function dMove(delta) {
+    var n = dSel + delta;
+    while (n >= 0 && n < dRows.length && dRows[n].head) n += delta;
+    if (n >= 0 && n < dRows.length) { dSel = n; dHighlight(); }
+  }
+
+  function openDua() {
+    var r = dRows[dSel];
+    if (!r || r.head) return;
+    var d = DUAS[r.cat].items[r.idx];
+    el('dread-title').textContent = catTitle(DUAS[r.cat].title) + ' — ' + d.t;
+    el('dread').innerHTML = '<div class="ayah"><div class="ar" dir="rtl">' + esc(d.ar) +
+      '</div><div class="en">' + esc(d.en) + '</div></div>';
+    el('dread').scrollTop = 0;
+    showScreen('dread');
+  }
+
+  function openDuas() {
+    showScreen('dlist');
+    if (duasState === 2) { buildDuasList(); return; }
+    if (duasState === 0) {
+      duasState = 1;
+      el('dlist').innerHTML = '<div class="lrow">' + t('loading_duas') + '</div>';
+      loadScript('duas-data.js', function () {
+        duasState = 2;
+        if (screen === 'dlist') buildDuasList();
+      });
+    }
+  }
+
+  /* ---------- Islamic holidays screen ---------- */
+
+  function fmtGreg(g) {
+    return new Date(g.year, g.month - 1, g.day).toLocaleDateString(LOCALE(), {
+      weekday: 'short', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+
+  function buildHolidays() {
+    var now = new Date();
+    var todayJd = gregToJd(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    var hYear = jdToIslamic(todayJd).year;
+    el('hol-year').textContent = hYear + ' ' + t('ah_suffix');
+    var html = '', i, occ, jd, g, diff, isNext;
+    var nextFound = false;
+    for (i = 0; i < OCCASIONS.length; i++) {
+      occ = OCCASIONS[i];
+      jd = islamicToJd(hYear, occ.m, occ.d);
+      g = jdToGreg(jd);
+      diff = jd - todayJd;
+      isNext = !nextFound && diff >= 0;
+      if (isNext) nextFound = true;
+      html += '<div class="lrow' + (isNext ? ' hl' : '') + (diff < 0 ? ' past' : '') + '">' +
+        esc(occName(occ)) + (occ.note ? ' (' + t('expected_word') + ')' : '') +
+        '  <span class="sub">' + esc(fmtGreg(g)) + ' &middot; ' + occ.d + ' ' +
+        HIJRI_MONTHS[occ.m - 1] + ' ' + hYear + ' ' + t('ah_suffix') +
+        (diff === 0 ? ' &middot; ' + t('today_word') :
+          (isNext ? ' &middot; ' + inDaysText(diff) : '')) +
+        '</span></div>';
+    }
+    if (!nextFound) {
+      // All of this Hijri year's occasions have passed (late Dhul-Hijjah):
+      // the next upcoming occasion is next year's Islamic New Year.
+      jd = islamicToJd(hYear + 1, 1, 1);
+      g = jdToGreg(jd);
+      diff = jd - todayJd;
+      html += '<div class="lrow hl">' + esc(occName(OCCASIONS[0])) +
+        '  <span class="sub">' + esc(fmtGreg(g)) + ' &middot; 1 ' + HIJRI_MONTHS[0] +
+        ' ' + (hYear + 1) + ' ' + t('ah_suffix') + ' &middot; ' + inDaysText(diff) +
+        '</span></div>';
+    }
+    var box = el('hollist');
+    box.innerHTML = html;
+    box.scrollTop = 0;
+  }
+
+  function openHolidays() {
+    buildHolidays();
+    showScreen('hol');
+  }
+
+  /* ---------- Location screen ---------- */
+
+  var locSel = 0;   // index into locRows of the highlighted row
+  var locFirst = 0; // first selectable row (Up from here focuses the Back button)
+
+  function locHighlight() {
+    var box = el('loclist'), rows = box.children, i;
+    for (i = 0; i < rows.length; i++) {
+      if (rows[i].className.indexOf('lrow') === 0) {
+        rows[i].className = 'lrow' + (i === locSel ? ' hl' : '');
+      }
+    }
+    keepVisible(box, rows[locSel]);
+  }
+
+  function buildLocationList() {
+    var html = '', i, r;
+    for (i = 0; i < locRows.length; i++) {
+      r = locRows[i];
+      if (r.head) {
+        html += '<div class="lhead">' + esc(countryName(r.country)) + '</div>';
+      } else {
+        var current = (r.name === loc.city && r.country === loc.country);
+        html += '<div class="lrow">' + esc(r.name) +
+          '  <span class="sub">' + esc(countryName(r.country)) + ' &middot; ' + r.method +
+          (current ? ' &middot; ' + t('current') : '') + '</span></div>';
+      }
+    }
+    el('loclist').innerHTML = html;
+    locSel = 0;
+    while (locSel < locRows.length && locRows[locSel].head) locSel++;
+    locFirst = locSel;
+    for (i = 0; i < locRows.length; i++) {
+      r = locRows[i];
+      if (!r.head && r.name === loc.city && r.country === loc.country) { locSel = i; break; }
+    }
+    locHighlight();
+  }
+
+  function locMove(delta) {
+    var n = locSel + delta;
+    while (n >= 0 && n < locRows.length && locRows[n].head) n += delta;
+    if (n >= 0 && n < locRows.length) { locSel = n; locHighlight(); }
+  }
+
+  function openLocation() {
+    buildLocationList();
+    showScreen('loc');
+  }
+
+  // OK on a city: make it the location everywhere (display, countdown,
+  // triggers, background service), remember it, and go home.
+  function selectLocation() {
+    var r = locRows[locSel];
+    if (!r || r.head) return;
+    loc = { city: r.name, country: r.country, lat: r.lat, lng: r.lng, method: r.method };
+    try {
+      window.localStorage.setItem('athan-location', JSON.stringify(loc));
+    } catch (e) { /* ignore */ }
+    todayKey = ''; // force recompute with the new location
+    updatePlace();
+    pingService(); // re-arm the background service with the new settings
+    emitSchedule(); // re-arm the Android background athan for the new city
+    showScreen('home');
+    render(new Date());
+  }
+
+  /* ---------- Background athan bridge (Android v1.2.0) ---------- */
+
+  // The native shell (MainActivity) exposes window.NoAdsBridge. The
+  // web layer computes the prayer schedule with the same praytimes
+  // code and the same settings it displays, and hands it to the
+  // native side, which arms exact AlarmManager alarms so the athan
+  // plays even when the app is closed. Payload: today + tomorrow;
+  // per day, the five athan prayers as epoch milliseconds (device
+  // timezone, exactly the displayed times), the localized prayer
+  // names and the localized salat message for the notification.
+  // Emitted on every app load, on every prayer-relevant settings
+  // change (city, Asr factor, athan sound, language) and at each day
+  // rollover. Every call is guarded: without the bridge (webOS/TV,
+  // desktop browser) this is a no-op and the app behaves as before.
+  var SCHED_KEYS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+  var SCHED_IDX = [0, 2, 3, 5, 6]; // praytimes indexes of the five
+
+  function schedDay(date) {
+    var times = PrayTimesLib.timesForDate(date, loc.lat, loc.lng, asrFactor, loc.method);
+    var prayers = {}, names = {}, k, idx, mins;
+    for (k = 0; k < SCHED_KEYS.length; k++) {
+      idx = SCHED_IDX[k];
+      mins = times[idx];
+      prayers[SCHED_KEYS[k]] = new Date(date.getFullYear(), date.getMonth(), date.getDate(),
+                                       Math.floor(mins / 60), mins % 60, 0, 0).getTime();
+      names[SCHED_KEYS[k]] = NAMES[idx];
+    }
+    return {
+      date: date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()),
+      prayers: prayers,
+      names: names,
+      salatMessage: SALAT_MESSAGES[lang]
+    };
+  }
+
+  function emitSchedule() {
+    try {
+      if (!window.NoAdsBridge || typeof window.NoAdsBridge.schedulePrayers !== 'function') return;
+      var now = new Date();
+      var payload = {
+        generatedAt: now.getTime(),
+        settings: {
+          lat: loc.lat, lng: loc.lng, method: loc.method,
+          asrFactor: asrFactor, adhanId: adhanIdx, lang: lang
+        },
+        days: [schedDay(now), schedDay(new Date(now.getTime() + 86400000))]
+      };
+      window.NoAdsBridge.schedulePrayers(JSON.stringify(payload));
+    } catch (e) { /* the app works fine without the native scheduler */ }
+  }
+
+  /* ---------- Buttons ---------- */
+
+  function adhanLabel() { btnAdhan.textContent = t('adhan_prefix') + adhanName(); }
+  adhanLabel();
+
+  el('btnListen').addEventListener('click', function () { toggleQuranAudio(); });
+  el('btnReciter').addEventListener('click', function () { cycleReciter(); });
+  btnPlay.addEventListener('click', function () { playAthan(); });
+  btnQuran.addEventListener('click', function () { openQuran(); });
+  btnDuas.addEventListener('click', function () { openDuas(); });
+  btnHolidays.addEventListener('click', function () { openHolidays(); });
+  btnLocation.addEventListener('click', function () { openLocation(); });
+  // Visible "← Back" buttons (Magic Remote pointer users): the same
+  // one-level-up step as the Back key.
+  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc'];
+  for (var bb = 0; bb < backBtns.length; bb++) {
+    el(backBtns[bb]).addEventListener('click', function () { goBack(); });
+  }
+
+  // Language button: cycle EN -> FR -> AR and remember the choice.
+  btnLang.addEventListener('click', function () {
+    var i = LANGS.indexOf(lang);
+    lang = LANGS[(i + 1) % LANGS.length];
+    try { window.localStorage.setItem('app-lang', lang); } catch (e) { /* ignore */ }
+    applyLanguage();
+    emitSchedule(); // notification names/message follow the UI language
+  });
+
+  // Touch (Android): tapping a list row mirrors highlight + OK on the
+  // remote. Rows are the container's children, headers included, which
+  // matches the *Rows models index for index.
+  function tappedRow(container, ev) {
+    var node = ev.target;
+    while (node && node.parentNode !== container) node = node.parentNode;
+    if (!node) return -1;
+    return Array.prototype.indexOf.call(container.children, node);
+  }
+  el('qlist').addEventListener('click', function (ev) {
+    var i = tappedRow(el('qlist'), ev);
+    if (i >= 0 && quranState === 2 && i < QURAN.length) {
+      qSel = i; qHighlight(); openSurah(i);
+    }
+  });
+  el('dlist').addEventListener('click', function (ev) {
+    var i = tappedRow(el('dlist'), ev);
+    if (i >= 0 && i < dRows.length && !dRows[i].head) {
+      dSel = i; dHighlight(); if (duasState === 2) openDua();
+    }
+  });
+  el('loclist').addEventListener('click', function (ev) {
+    var i = tappedRow(el('loclist'), ev);
+    if (i >= 0 && i < locRows.length && !locRows[i].head) {
+      locSel = i; locHighlight(); selectLocation();
+    }
+  });
+  // Tapping the salat overlay dismisses it, like any remote key.
+  el('salat-overlay').addEventListener('click', function () {
+    if (el('salat-overlay').className === 'on') {
+      salatDismissed = salatKey;
+      hideSalatMessage();
+    }
+  });
+
+  btnAdhan.addEventListener('click', function () {
+    adhanIdx = (adhanIdx + 1) % ADHAN_FILES.length;
+    try { window.localStorage.setItem('athan-sound', String(adhanIdx)); } catch (e) { /* ignore */ }
+    audio.src = ADHAN_FILES[adhanIdx];
+    adhanLabel();
+    emitSchedule(); // the background athan uses the selected recording
+  });
+  btnAsr.addEventListener('click', function () {
+    asrFactor = asrFactor === 2 ? 1 : 2;
+    try { window.localStorage.setItem('athan-asr', String(asrFactor)); } catch (e) { /* ignore */ }
+    todayKey = ''; // force recompute with the new factor
+    pingService(); // the background service schedules with this factor too
+    emitSchedule();
+    render(new Date());
+  });
+
+  /* ---------- Remote key handling ---------- */
+
+  document.addEventListener('keydown', function (ev) {
+    var k = ev.keyCode || ev.which;
+
+    // The Salat message consumes any navigation key to dismiss it.
+    if (el('salat-overlay').className === 'on' &&
+        (k === 13 || k === 32 || k === 461 || k === 37 || k === 38 || k === 39 || k === 40)) {
+      if (pendingAutoAthan && (k === 13 || k === 32)) {
+        // This OK press is the sound unlock for a service-launched athan:
+        // keep the big message on screen; the unlock handler runs the
+        // reminder + athan chain once the sound is unlocked.
+        ev.preventDefault();
+        return;
+      }
+      salatDismissed = salatKey;
+      hideSalatMessage();
+      ev.preventDefault();
+      return;
+    }
+
+    if (screen === 'home') {
+      if (k === 37 || k === 39) { // left / right: move across the buttons
+        var i = BTNS.indexOf(document.activeElement);
+        if (i < 0) i = 0;
+        else i = (i + (k === 39 ? 1 : BTNS.length - 1)) % BTNS.length;
+        BTNS[i].focus();
+        ev.preventDefault();
+      } else if (k === 13 || k === 32) { // OK / Enter or Space activates focused button
+        var a = document.activeElement;
+        if (BTNS.indexOf(a) >= 0) { a.click(); ev.preventDefault(); }
+      }
+    } else if (screen === 'qlist') {
+      var qBackBtn = el('btnBackQList');
+      if (document.activeElement === qBackBtn) {
+        // Remote focus is on the header's Back button: OK goes home,
+        // Down hands focus back to the surah list, other arrows stay.
+        if (k === 13 || k === 32) goBack();
+        else if (k === 40) { try { qBackBtn.blur(); } catch (e) { /* ignore */ } }
+        ev.preventDefault();
+        return;
+      }
+      if (k === 38 || k === 40) {
+        if (k === 38 && qSel === 0) {
+          // Up from the first surah moves remote focus to the Back button.
+          try { qBackBtn.focus(); } catch (e) { /* ignore */ }
+          ev.preventDefault();
+          return;
+        }
+        qSel += (k === 40 ? 1 : -1);
+        if (qSel < 0) qSel = 0;
+        if (qSel > QURAN.length - 1) qSel = QURAN.length - 1;
+        qHighlight();
+        ev.preventDefault();
+      } else if (k === 37 || k === 39) {
+        qSel += (k === 39 ? 10 : -10);
+        if (qSel < 0) qSel = 0;
+        if (qSel > QURAN.length - 1) qSel = QURAN.length - 1;
+        qHighlight();
+        ev.preventDefault();
+      } else if (k === 13 || k === 32) {
+        if (quranState === 2) { openSurah(qSel); }
+        ev.preventDefault();
+      } else if (k === 461) {
+        goBack(); // fallback; the central capture handler normally takes 461
+        ev.preventDefault();
+      }
+    } else if (screen === 'qread') {
+      // Focus scheme: opening a surah puts the remote on the Listen button.
+      // The header bar is Back | Listen | Reciter: Right moves Back ->
+      // Listen -> Reciter, Left moves back the other way; OK goes back on
+      // Back, plays/pauses on Listen and cycles the reciter on Reciter.
+      // Down from any bar button moves into the text and scrolls; Up at
+      // the top of the text returns to the Listen button; the Back key
+      // (central handler) returns to the list — playback continues.
+      if (k === 13 || k === 32) {
+        if (qBackFocus) { goBack(); ev.preventDefault(); }
+        else if (qListenFocus) { toggleQuranAudio(); ev.preventDefault(); }
+        else if (qReciterFocus) { cycleReciter(); ev.preventDefault(); }
+      } else if (k === 39) {
+        if (qBackFocus) { setListenFocus(true); ev.preventDefault(); }
+        else if (qListenFocus) { setReciterFocus(true); ev.preventDefault(); }
+        else if (qReciterFocus) { ev.preventDefault(); }
+      } else if (k === 37) {
+        if (qReciterFocus) { setListenFocus(true); ev.preventDefault(); }
+        else if (qListenFocus) { setQBarFocus('back'); ev.preventDefault(); }
+        else if (qBackFocus) { ev.preventDefault(); }
+      } else if (k === 40) {
+        if (qBackFocus || qListenFocus || qReciterFocus) setQBarFocus('none');
+        el('qread').scrollTop += 340;
+        ev.preventDefault();
+      } else if (k === 38) {
+        if (qBackFocus || qListenFocus || qReciterFocus) { /* already at the top */ }
+        else if (el('qread').scrollTop <= 0) setListenFocus(true);
+        else el('qread').scrollTop -= 340;
+        ev.preventDefault();
+      } else if (k === 461) {
+        goBack(); // fallback; the central capture handler normally takes 461
+        ev.preventDefault();
+      }
+    } else if (screen === 'dlist') {
+      var dBackBtn = el('btnBackDList');
+      if (document.activeElement === dBackBtn) {
+        // Remote focus is on the header's Back button: OK goes home,
+        // Down hands focus back to the list, other arrows stay.
+        if (k === 13 || k === 32) goBack();
+        else if (k === 40) { try { dBackBtn.blur(); } catch (e) { /* ignore */ } }
+        ev.preventDefault();
+        return;
+      }
+      if (k === 40) { dMove(1); ev.preventDefault(); }
+      else if (k === 38) {
+        // Up from the first dua moves remote focus to the Back button.
+        if (dSel === dFirst) { try { dBackBtn.focus(); } catch (e) { /* ignore */ } }
+        else dMove(-1);
+        ev.preventDefault();
+      }
+      else if (k === 13 || k === 32) { if (duasState === 2) openDua(); ev.preventDefault(); }
+      else if (k === 461) { goBack(); ev.preventDefault(); } // fallback; central handler normally takes 461
+    } else if (screen === 'dread') {
+      var drBackBtn = el('btnBackDRead');
+      if (document.activeElement === drBackBtn) {
+        // Remote focus is on the header's Back button: OK returns to the
+        // duas list, Down hands focus back to the text, other arrows stay.
+        if (k === 13 || k === 32) goBack();
+        else if (k === 40) { try { drBackBtn.blur(); } catch (e) { /* ignore */ } }
+        ev.preventDefault();
+        return;
+      }
+      if (k === 40) { el('dread').scrollTop += 340; ev.preventDefault(); }
+      else if (k === 38) {
+        // Up at the top of the text moves remote focus to the Back button.
+        if (el('dread').scrollTop <= 0) { try { drBackBtn.focus(); } catch (e) { /* ignore */ } }
+        else el('dread').scrollTop -= 340;
+        ev.preventDefault();
+      }
+      else if (k === 461) { goBack(); ev.preventDefault(); } // fallback; central handler normally takes 461
+    } else if (screen === 'hol') {
+      if (k === 40) { el('hollist').scrollTop += 340; ev.preventDefault(); }
+      else if (k === 38) { el('hollist').scrollTop -= 340; ev.preventDefault(); }
+      else if (k === 461) { goBack(); ev.preventDefault(); } // fallback; central handler normally takes 461
+    } else if (screen === 'loc') {
+      var locBackBtn = el('btnBackLoc');
+      if (document.activeElement === locBackBtn) {
+        // Remote focus is on the header's Back button: OK goes home,
+        // Down hands focus back to the city list, other arrows stay.
+        if (k === 13 || k === 32) goBack();
+        else if (k === 40) { try { locBackBtn.blur(); } catch (e) { /* ignore */ } }
+        ev.preventDefault();
+        return;
+      }
+      if (k === 40) { locMove(1); ev.preventDefault(); }
+      else if (k === 38) {
+        // Up from the first city moves remote focus to the Back button.
+        if (locSel === locFirst) { try { locBackBtn.focus(); } catch (e) { /* ignore */ } }
+        else locMove(-1);
+        ev.preventDefault();
+      }
+      else if (k === 37 || k === 39) {
+        for (var lj = 0; lj < 10; lj++) locMove(k === 39 ? 1 : -1);
+        ev.preventDefault();
+      }
+      else if (k === 13 || k === 32) { selectLocation(); ev.preventDefault(); }
+      else if (k === 461) { goBack(); ev.preventDefault(); } // fallback; central handler normally takes 461
+    }
+  });
+
+  /* ---------- Background service integration (v1.2.0) ---------- */
+
+  // Set when the background service launched us for a prayer but autoplay
+  // was blocked; the first successful sound unlock runs the chain.
+  var pendingAutoAthan = false;
+
+  // Ask the bundled service to (re)arm its prayer schedule, carrying the
+  // current location settings so the service schedules for the chosen
+  // city (it remembers them; until first armed it uses Montréal/ISNA).
+  // Runs on every load and relaunch; if the service had been killed,
+  // this starts it.
+  function pingService() {
+    var params = { lat: loc.lat, lng: loc.lng, method: loc.method, asrFactor: asrFactor };
+    try {
+      if (window.webOS && window.webOS.service && window.webOS.service.request) {
+        window.webOS.service.request('luna://com.housseyn.athantv.service/', {
+          method: 'arm',
+          parameters: params,
+          onComplete: function () {}
+        });
+      } else if (typeof PalmServiceBridge !== 'undefined') {
+        var bridge = new PalmServiceBridge();
+        bridge.onservicecallback = function () {};
+        bridge.call('luna://com.housseyn.athantv.service/arm', JSON.stringify(params));
+      }
+    } catch (e) { /* the app works fine without the service */ }
+  }
+
+  function readLaunchParams() {
+    var raw = null;
+    try {
+      if (window.PalmSystem) raw = window.PalmSystem.launchParams;
+    } catch (e) { /* ignore */ }
+    if (!raw) return null;
+    try {
+      return (typeof raw === 'string') ? JSON.parse(raw) : raw;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // The background service launched (or relaunched) us for a prayer:
+  // show the salat message and run the reminder -> athan chain right away.
+  function handleAutoAthan(name, ts) {
+    var idx = -1, i;
+    for (i = 0; i < NAMES.length; i++) {
+      if (NAMES[i] === name && ATHAN_AT[i]) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    if (typeof ts === 'number') {
+      var age = Date.now() - ts;
+      if (age > 5 * 60 * 1000 || age < -60 * 1000) return; // stale / skewed
+    }
+    refreshTimes(new Date());
+    var key = todayKey + ':' + idx;
+    if (lastPlayedKey === key) return; // in-app trigger already handled it
+    lastPlayedKey = key;               // and stop the in-app trigger doubling
+    salatKey = key;
+    salatDismissed = '';
+    stopQuranAudio(); // prayer time takes over the audio from any recitation
+    showSalatMessage();
+    if (soundUnlocked) {
+      startReminderThenAthan(function () { playAthan(); });
+    } else {
+      // Fresh process: autoplay may be blocked until a remote press. Try
+      // anyway; if play() is rejected, keep the big message up, show the
+      // "Press OK" hint, and let the unlock run the chain (see unlock()).
+      startReminderThenAthan(function () {
+        pendingAutoAthan = true;
+        el('soundmsg').style.display = 'block';
+      });
+    }
+  }
+
+  function handleLaunchParams() {
+    pingService();
+    var lp = readLaunchParams();
+    if (lp && lp.autoAthan) handleAutoAthan(lp.autoAthan, lp.ts);
+  }
+  document.addEventListener('relaunch', handleLaunchParams);
+  document.addEventListener('webOSRelaunch', handleLaunchParams);
+
+  // Main loop: update the display every second; check athan times every tick
+  // (the minute-match guard makes each athan play exactly once).
+  var lastSchedDayKey = '';
+  function tick() {
+    var now = new Date();
+    render(now);
+    salatTick(now);
+    checkAthan(now);
+    // Day rollover: hand the native scheduler a fresh today+tomorrow.
+    var dk = dayKey(now);
+    if (lastSchedDayKey && dk !== lastSchedDayKey) emitSchedule();
+    lastSchedDayKey = dk;
+  }
+  updatePlace(); // home header shows the saved/default location
+  applyLanguage(); // localize all chrome (saved language or English)
+  tick();
+  handleLaunchParams();
+  emitSchedule(); // arm the Android background athan on every app load
+  setInterval(tick, 1000);
+  // Safety net: a dedicated athan check every 20 seconds as well.
+  setInterval(function () { checkAthan(new Date()); }, 20000);
+
+  // If sound was never unlocked, remind the user once at startup.
+  setTimeout(function () {
+    if (!soundUnlocked) el('soundmsg').style.display = 'block';
+  }, 3000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+# NoAds Athan — iOS build pipeline for Codemagic (cloud Mac).
+#
+# One manual prerequisite round (see README-APPLE-STEPS.md):
+#   1. Apple Developer Program membership (owner).
+#   2. An App Store Connect API key (.p8) created by the owner.
+#   3. In Codemagic, an environment variable GROUP named
+#      "app_store_connect" containing:
+#         APP_STORE_CONNECT_ISSUER_ID       (from App Store Connect)
+#         APP_STORE_CONNECT_KEY_IDENTIFIER  (the key's ID)
+#         APP_STORE_CONNECT_PRIVATE_KEY     (full contents of the .p8 file)
+#      The build scripts and the publishing step below read those
+#      variables — no secrets live in this file.
+#   4. An app record for bundle id com.housseyn.noadsathan in
+#      App Store Connect (owner creates it once; uploads need a home).
+#
+# The project uses Swift Package Manager (Capacitor 8 default):
+# there is no Podfile and no .xcworkspace — always build the
+# .xcodeproj. Capacitor 8's CLI requires Node >= 22.
+
+workflows:
+  ios-testflight:
+    name: NoAds Athan iOS — TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      # Automatic code signing: Codemagic uses the App Store Connect
+      # API key to fetch — or create — the distribution certificate
+      # and provisioning profile for this bundle id.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.housseyn.noadsathan
+      groups:
+        - app_store_connect
+      vars:
+        BUNDLE_ID: com.housseyn.noadsathan
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+      node: 22
+      xcode: latest
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci
+      - name: Sync Capacitor iOS project
+        script: |
+          npx cap sync ios
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build the IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        # Land in TestFlight only. App Store release stays a manual
+        # decision in App Store Connect after testing.
+        submit_to_testflight: true
+        submit_to_app_store: false
