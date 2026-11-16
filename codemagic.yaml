@@ -23,12 +23,13 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
-      # Automatic code signing: Codemagic uses the App Store Connect
-      # API key to fetch — or create — the distribution certificate
-      # and provisioning profile for this bundle id.
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.housseyn.noadsathan
+      # Code signing is handled by the "Set up code signing" script
+      # below (app-store-connect fetch-signing-files --create), which
+      # creates the distribution certificate and provisioning profile
+      # on first run. Do NOT add an environment.ios_signing block here:
+      # Codemagic's built-in signing only fetches existing profiles and
+      # fails the build with "No matching profiles found" before the
+      # scripts get a chance to create them (build #1, 2026-11-15).
       groups:
         - app_store_connect
       vars:
