@@ -275,6 +275,12 @@
     margin-bottom: 10px;
   }
   #nb-status { font-size: 24px; color: #b9c8e2; text-align: center; padding: 10px 6px; }
+  #nb-retrybox { display: none; text-align: center; margin-bottom: 10px; }
+  #nbRetry {
+    background: transparent; border: 2px solid #e8c877; border-radius: 999px;
+    color: #ffd968; font-size: 22px; font-weight: 700; font-family: inherit;
+    padding: 8px 34px; cursor: pointer;
+  }
   .nbrow { display: flex; align-items: center; gap: 14px; white-space: normal; }
   .nbrow .nbname { flex: 1; overflow: hidden; text-overflow: ellipsis; }
   .nbdir {
@@ -349,6 +355,7 @@
     #nb-map { min-height: 180px; }
     #nb-note, #nb-halalnote { font-size: 14px; }
     #nb-status { font-size: 16px; }
+    #nbRetry { font-size: 16px; padding: 7px 26px; }
     .nbdir { font-size: 15px; padding: 5px 14px; }
     #nb-tabs { gap: 8px; margin-bottom: 8px; }
   }
@@ -441,6 +448,7 @@
     <div id="nb-map"></div>
     <div id="nb-halalnote"></div>
     <div id="nb-status"></div>
+    <div id="nb-retrybox"><button id="nbRetry"></button></div>
     <div id="nblist" class="listbox"></div>
     <div class="scr-foot" id="footNearby">&copy; OpenStreetMap contributors</div>
   </div>
@@ -538,6 +546,7 @@
     nb_finding: { en: 'Finding places near you\u2026', fr: 'Recherche des lieux pr\u00e8s de vous\u2026', ar: 'جارٍ البحث عن أماكن قريبة منك…' },
     nb_using_city: { en: 'Using {city} \u2014 turn on location for exact results.', fr: 'Position bas\u00e9e sur {city} \u2014 activez la localisation pour des r\u00e9sultats pr\u00e9cis.', ar: 'يتم استخدام {city} — فعّل الموقع لنتائج دقيقة.' },
     nb_error: { en: 'Could not load nearby places \u2014 check the internet connection and try again.', fr: 'Impossible de charger les lieux \u00e0 proximit\u00e9 \u2014 v\u00e9rifiez la connexion Internet et r\u00e9essayez.', ar: 'تعذّر تحميل الأماكن القريبة — تحقق من اتصال الإنترنت وحاول مجددًا.' },
+    nbRetry: { en: 'Retry', fr: 'R\u00e9essayer', ar: 'حاول مجددًا' },
     nb_empty_mosques: { en: 'No mosques found nearby.', fr: 'Aucune mosqu\u00e9e trouv\u00e9e \u00e0 proximit\u00e9.', ar: 'لم يتم العثور على مساجد قريبة.' },
     nb_empty_halal: { en: 'No halal-tagged places found nearby.', fr: 'Aucun lieu \u00e9tiquet\u00e9 halal trouv\u00e9 \u00e0 proximit\u00e9.', ar: 'لم يتم العثور على أماكن موسومة حلال قريبة.' },
     nb_halal_note: { en: 'Places tagged halal on OpenStreetMap \u2014 not every halal restaurant is tagged yet.', fr: 'Lieux \u00e9tiquet\u00e9s halal sur OpenStreetMap \u2014 tous les restaurants halal ne sont pas encore \u00e9tiquet\u00e9s.', ar: 'أماكن موسومة حلال على OpenStreetMap — ليست كل المطاعم الحلال موسومة بعد.' },
@@ -1987,23 +1996,24 @@
     var filter = kind === 'halal'
       ? '["amenity"~"^(restaurant|fast_food|cafe)$"]["diet:halal"="yes"]'
       : '["amenity"="place_of_worship"]["religion"="muslim"]';
-    return '[out:json][timeout:30];(node' + filter + '(around:' + radius + ',' + lat + ',' + lng + ');' +
+    return '[out:json][timeout:55];(node' + filter + '(around:' + radius + ',' + lat + ',' + lng + ');' +
            'way' + filter + '(around:' + radius + ',' + lat + ',' + lng + '););out center tags;';
   }
 
-  // Overpass can be slow and occasionally answers 502: one request at
-  // a time, a 30 s timeout, one retry on the main endpoint, then the
-  // kumi.systems mirror.
+  // Overpass can be slow (a busy query may need most of a minute) and
+  // occasionally answers 502: one request at a time, a 60 s timeout,
+  // rotating endpoints (main, kumi.systems mirror, main again) so one
+  // overloaded host cannot stall the feature.
   var NB_ENDPOINTS = ['https://overpass-api.de/api/interpreter',
-                      'https://overpass-api.de/api/interpreter',
-                      'https://overpass.kumi.systems/api/interpreter'];
+                      'https://overpass.kumi.systems/api/interpreter',
+                      'https://overpass-api.de/api/interpreter'];
   function nbFetch(kind, lat, lng, done) {
     var attempt = 0;
     (function tryOnce() {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', NB_ENDPOINTS[attempt], true);
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
-      xhr.timeout = 30000;
+      xhr.timeout = 60000;
       xhr.onreadystatechange = function () {
         if (xhr.readyState !== 4) return;
         if (xhr.status === 200) {
@@ -2127,11 +2137,17 @@
     setTimeout(function () { if (nbMap) nbMap.invalidateSize(); }, 60);
   }
 
+  function nbShowRetry(show) {
+    if (show) el('nbRetry').textContent = t('nbRetry');
+    el('nb-retrybox').style.display = show ? 'block' : 'none';
+  }
+
   function nbRender() {
     el('nbTabMosques').className = nbTab === 'mosques' ? 'nb-on' : '';
     el('nbTabHalal').className = nbTab === 'halal' ? 'nb-on' : '';
     el('nb-halalnote').style.display = nbTab === 'halal' ? 'block' : 'none';
     el('nb-halalnote').textContent = t('nb_halal_note');
+    nbShowRetry(false);
     var results = nbCache[nbTab];
     var status = el('nb-status'), box = el('nblist');
     if (!results) {
@@ -2175,6 +2191,7 @@
           var st = el('nb-status');
           st.textContent = t('nb_error');
           st.style.display = 'block';
+          nbShowRetry(true);
         } else {
           nbLoadTab();
         }
@@ -2216,6 +2233,7 @@
 
   el('nbTabMosques').addEventListener('click', function () { nbSetTab('mosques'); });
   el('nbTabHalal').addEventListener('click', function () { nbSetTab('halal'); });
+  el('nbRetry').addEventListener('click', function () { nbLoadTab(); });
   // Directions links: open in the system browser / a new tab rather
   // than navigating the app's own WebView away from the app.
   el('nblist').addEventListener('click', function (ev) {
