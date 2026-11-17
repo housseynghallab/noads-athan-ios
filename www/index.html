@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NoAds Athan</title>
+<link rel="stylesheet" href="leaflet.css">
 <!-- iOS only: translates the NoAdsBridge schedule calls into Capacitor
      local notifications. A no-op on Android / webOS / desktop. -->
 <script src="ios-bridge.js"></script>
@@ -257,6 +258,46 @@
     padding: 38px 56px; text-align: center; max-width: 86%;
   }
 
+
+  /* Nearby (mosques + halal food): Leaflet map + results list */
+  #nb-map {
+    position: relative; height: 40%; min-height: 220px; flex: none;
+    border-radius: 14px; overflow: hidden; margin-bottom: 12px;
+    direction: ltr; background: #13294b; z-index: 0;
+  }
+  #nb-tabs { display: flex; gap: 12px; margin-bottom: 12px; }
+  #nb-tabs button { flex: 1; }
+  #nb-tabs button.nb-on {
+    border-color: #e8c877; background: rgba(232, 200, 119, 0.22); color: #ffd968;
+  }
+  #nb-note, #nb-halalnote {
+    display: none; font-size: 21px; color: #ffe9a8; text-align: center;
+    margin-bottom: 10px;
+  }
+  #nb-status { font-size: 24px; color: #b9c8e2; text-align: center; padding: 10px 6px; }
+  .nbrow { display: flex; align-items: center; gap: 14px; white-space: normal; }
+  .nbrow .nbname { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .nbdir {
+    flex: none; color: #0b1e3a; background: #e8c877; border-radius: 999px;
+    padding: 6px 18px; font-size: 22px; font-weight: 700; text-decoration: none;
+  }
+  /* Pins are Leaflet divIcons (no marker image assets needed) */
+  .nb-pin {
+    width: 20px; height: 20px; margin: 2px; border-radius: 50%;
+    background: #d64541; border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.55);
+  }
+  .nb-me {
+    width: 16px; height: 16px; margin: 3px; border-radius: 50%;
+    background: #2f7bff; border: 3px solid #ffffff;
+    box-shadow: 0 0 0 6px rgba(47,123,255,0.30);
+  }
+  .leaflet-container { font-family: inherit; }
+  /* leaflet.css points at images/*.png for the layers control and the
+     default marker icon; this app uses neither (divIcon pins only),
+     so drop those references instead of shipping the images. */
+  .leaflet-control-layers-toggle, .leaflet-default-icon-path { background-image: none; }
+
   /* ---- Phone pass (Android): touch scrolling + small portrait screens ---- */
   [dir="rtl"] .ayah .en { direction: ltr; text-align: left; }
   .lrow, .lhead { cursor: pointer; }
@@ -305,6 +346,11 @@
     #btnListen { margin-inline-start: 8px; }
     #btnReciter { margin-inline-start: 8px; }
     #salat-pill { font-size: 32px; padding: 22px 24px; }
+    #nb-map { min-height: 180px; }
+    #nb-note, #nb-halalnote { font-size: 14px; }
+    #nb-status { font-size: 16px; }
+    .nbdir { font-size: 15px; padding: 5px 14px; }
+    #nb-tabs { gap: 8px; margin-bottom: 8px; }
   }
 </style>
 </head>
@@ -331,6 +377,7 @@
       <button id="btnDuas" tabindex="3">Duas</button><span class="sep">&bull;</span>
       <button id="btnHolidays" tabindex="8">Holidays</button><span class="sep">&bull;</span>
       <button id="btnLocation" tabindex="6">Location</button><span class="sep">&bull;</span>
+      <button id="btnNearby" tabindex="9">Nearby</button><span class="sep">&bull;</span>
       <button id="btnLang" tabindex="7">Language: English</button><span class="sep">&bull;</span>
       <button id="btnAdhan" tabindex="4">Adhan: Classic</button><span class="sep">&bull;</span>
       <button id="btnAsr" tabindex="5">Asr: Hanafi / Shafi'i</button>
@@ -384,12 +431,27 @@
     <div class="scr-foot" id="footLoc">&#8593;&#8595; choose &middot; &#8592;&#8594; jump &middot; OK select &middot; Back: home</div>
   </div>
 
+  <div id="screen-nearby" class="screen">
+    <div class="scr-top"><button id="btnBackNearby" class="btn-back" tabindex="16">&#8592; Back</button><div class="scr-head" id="headNearby">Nearby</div><div class="scr-spacer"></div></div>
+    <div id="nb-note"></div>
+    <div id="nb-tabs">
+      <button id="nbTabMosques">Mosques</button>
+      <button id="nbTabHalal">Halal Food</button>
+    </div>
+    <div id="nb-map"></div>
+    <div id="nb-halalnote"></div>
+    <div id="nb-status"></div>
+    <div id="nblist" class="listbox"></div>
+    <div class="scr-foot" id="footNearby">&copy; OpenStreetMap contributors</div>
+  </div>
+
   <div id="salat-overlay"><div id="salat-pill"></div></div>
 
   <audio id="adhan" src="adhan.mp3" preload="auto"></audio>
   <audio id="salat" src="salat-reminder.mp3" preload="auto"></audio>
   <audio id="quran-audio" preload="none"></audio>
 
+<script src="leaflet.js"></script>
 <script src="praytimes.js"></script>
 <script>
 (function () {
@@ -467,6 +529,19 @@
     duas_btn: { en: 'Duas', fr: 'Douas', ar: 'الأدعية' },
     holidays_btn: { en: 'Holidays', fr: 'Fêtes', ar: 'المناسبات' },
     location_btn: { en: 'Location', fr: 'Ville', ar: 'المدينة' },
+    nearby_btn: { en: 'Nearby', fr: '\u00c0 proximit\u00e9', ar: 'القريب' },
+    head_nearby: { en: 'Nearby', fr: '\u00c0 proximit\u00e9', ar: 'القريب' },
+    tab_mosques: { en: 'Mosques', fr: 'Mosqu\u00e9es', ar: 'المساجد' },
+    tab_halal: { en: 'Halal Food', fr: 'Nourriture halal', ar: 'طعام حلال' },
+    directions: { en: 'Directions', fr: 'Itin\u00e9raire', ar: 'الاتجاهات' },
+    mosque_word: { en: 'Mosque', fr: 'Mosqu\u00e9e', ar: 'مسجد' },
+    nb_finding: { en: 'Finding places near you\u2026', fr: 'Recherche des lieux pr\u00e8s de vous\u2026', ar: 'جارٍ البحث عن أماكن قريبة منك…' },
+    nb_using_city: { en: 'Using {city} \u2014 turn on location for exact results.', fr: 'Position bas\u00e9e sur {city} \u2014 activez la localisation pour des r\u00e9sultats pr\u00e9cis.', ar: 'يتم استخدام {city} — فعّل الموقع لنتائج دقيقة.' },
+    nb_error: { en: 'Could not load nearby places \u2014 check the internet connection and try again.', fr: 'Impossible de charger les lieux \u00e0 proximit\u00e9 \u2014 v\u00e9rifiez la connexion Internet et r\u00e9essayez.', ar: 'تعذّر تحميل الأماكن القريبة — تحقق من اتصال الإنترنت وحاول مجددًا.' },
+    nb_empty_mosques: { en: 'No mosques found nearby.', fr: 'Aucune mosqu\u00e9e trouv\u00e9e \u00e0 proximit\u00e9.', ar: 'لم يتم العثور على مساجد قريبة.' },
+    nb_empty_halal: { en: 'No halal-tagged places found nearby.', fr: 'Aucun lieu \u00e9tiquet\u00e9 halal trouv\u00e9 \u00e0 proximit\u00e9.', ar: 'لم يتم العثور على أماكن موسومة حلال قريبة.' },
+    nb_halal_note: { en: 'Places tagged halal on OpenStreetMap \u2014 not every halal restaurant is tagged yet.', fr: 'Lieux \u00e9tiquet\u00e9s halal sur OpenStreetMap \u2014 tous les restaurants halal ne sont pas encore \u00e9tiquet\u00e9s.', ar: 'أماكن موسومة حلال على OpenStreetMap — ليست كل المطاعم الحلال موسومة بعد.' },
+    nb_attribution: { en: 'Map data \u00a9 OpenStreetMap contributors', fr: 'Donn\u00e9es cartographiques \u00a9 OpenStreetMap contributors', ar: 'بيانات الخريطة © OpenStreetMap contributors' },
     language_label: { en: 'Language: ', fr: 'Langue : ', ar: 'اللغة: ' },
     language_name: { en: 'English', fr: 'Français', ar: 'العربية' },
     back: { en: '\u2190 Back', fr: '\u2190 Retour', ar: 'رجوع' },
@@ -577,14 +652,16 @@
     btnDuas.textContent = t('duas_btn');
     btnHolidays.textContent = t('holidays_btn');
     btnLocation.textContent = t('location_btn');
+    btnNearby.textContent = t('nearby_btn');
     btnLang.textContent = t('language_label') + t('language_name');
     btnAsr.textContent = t('asr_word') + ': ' + t('hanafi') + ' / ' + t('shafii');
     adhanLabel();
-    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc'];
+    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby'];
     for (var bi = 0; bi < bbIds.length; bi++) el(bbIds[bi]).textContent = t('back');
     el('headQList').textContent = t('head_qlist');
     el('headDList').textContent = t('head_dlist');
     el('headLoc').textContent = t('head_loc');
+    el('headNearby').textContent = t('head_nearby');
     el('headHol').innerHTML = t('head_hol') + ' &middot; <span id="hol-year"></span>';
     el('footQList').textContent = t('foot_qlist');
     el('footQRead').textContent = t('foot_qread');
@@ -611,6 +688,7 @@
     }
     if (screen === 'hol') buildHolidays();
     if (screen === 'loc') buildLocationList();
+    nbRefreshTexts();
     render(new Date());
   }
 
@@ -1222,19 +1300,20 @@
 
   /* ---------- Screens ---------- */
 
-  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc
+  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc | nearby
   window.__appScreen = 'home';
-  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location' };
+  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location', nearby: 'screen-nearby' };
 
   var btnPlay = el('btnPlay');
   var btnQuran = el('btnQuran');
   var btnDuas = el('btnDuas');
   var btnHolidays = el('btnHolidays');
   var btnLocation = el('btnLocation');
+  var btnNearby = el('btnNearby');
   var btnAdhan = el('btnAdhan');
   var btnAsr = el('btnAsr');
   var btnLang = el('btnLang');
-  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnLocation, btnAdhan, btnAsr, btnLang];
+  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnLocation, btnNearby, btnAdhan, btnAsr, btnLang];
 
   function showScreen(name) {
     screen = name;
@@ -1266,6 +1345,7 @@
     else if (screen === 'dlist') { showScreen('home'); }
     else if (screen === 'hol') { showScreen('home'); }
     else if (screen === 'loc') { showScreen('home'); }
+    else if (screen === 'nearby') { showScreen('home'); }
     // home: stay — Back on the home screen never leaves the app.
   }
 
@@ -1805,9 +1885,10 @@
   btnDuas.addEventListener('click', function () { openDuas(); });
   btnHolidays.addEventListener('click', function () { openHolidays(); });
   btnLocation.addEventListener('click', function () { openLocation(); });
+  btnNearby.addEventListener('click', function () { openNearby(); });
   // Visible "← Back" buttons (Magic Remote pointer users): the same
   // one-level-up step as the Back key.
-  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc'];
+  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby'];
   for (var bb = 0; bb < backBtns.length; bb++) {
     el(backBtns[bb]).addEventListener('click', function () { goBack(); });
   }
@@ -1870,6 +1951,283 @@
     pingService(); // the background service schedules with this factor too
     emitSchedule();
     render(new Date());
+  });
+
+  /* ---------- Nearby: mosques + halal food around you ---------- */
+
+  // Data: OpenStreetMap via the Overpass API (no key, CORS-enabled).
+  // Position: the Capacitor Geolocation plugin when present (iOS),
+  // else the Web Geolocation API (Android WebView grants it through
+  // MainActivity's WebChromeClient). If no position is available the
+  // feature falls back to the currently selected city and says so.
+  // Results are cached per tab, keyed by a rounded position (~100 m):
+  // reopening the screen or switching tabs refetches only when the
+  // position actually moved.
+  var nbPos = null;        // {lat, lng} in use
+  var nbPosIsGPS = false;  // false = selected-city fallback
+  var nbTab = 'mosques';   // 'mosques' | 'halal'
+  var nbCache = { mosques: null, halal: null };
+  var nbCacheKey = '';
+  var nbMap = null, nbLayer = null, nbMeMarker = null;
+  var nbBusy = false;
+
+  function nbKey(lat, lng) { return lat.toFixed(3) + ',' + lng.toFixed(3); }
+
+  function nbHaversineKm(aLat, aLng, bLat, bLng) {
+    var R = 6371, dLat = (bLat - aLat) * Math.PI / 180, dLng = (bLng - aLng) * Math.PI / 180;
+    var s = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(aLat * Math.PI / 180) * Math.cos(bLat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.sqrt(s));
+  }
+
+  function nbQuery(kind, lat, lng) {
+    // Halal tagging is sparse, so halal searches a wider radius.
+    var radius = kind === 'halal' ? 15000 : 8000;
+    var filter = kind === 'halal'
+      ? '["amenity"~"^(restaurant|fast_food|cafe)$"]["diet:halal"="yes"]'
+      : '["amenity"="place_of_worship"]["religion"="muslim"]';
+    return '[out:json][timeout:30];(node' + filter + '(around:' + radius + ',' + lat + ',' + lng + ');' +
+           'way' + filter + '(around:' + radius + ',' + lat + ',' + lng + '););out center tags;';
+  }
+
+  // Overpass can be slow and occasionally answers 502: one request at
+  // a time, a 30 s timeout, one retry on the main endpoint, then the
+  // kumi.systems mirror.
+  var NB_ENDPOINTS = ['https://overpass-api.de/api/interpreter',
+                      'https://overpass-api.de/api/interpreter',
+                      'https://overpass.kumi.systems/api/interpreter'];
+  function nbFetch(kind, lat, lng, done) {
+    var attempt = 0;
+    (function tryOnce() {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', NB_ENDPOINTS[attempt], true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+      xhr.timeout = 30000;
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (xhr.status === 200) {
+          try { done(null, JSON.parse(xhr.responseText)); return; }
+          catch (e) { /* malformed body: treat as a failure and retry */ }
+        }
+        attempt++;
+        if (attempt < NB_ENDPOINTS.length) tryOnce(); else done(new Error('overpass'));
+      };
+      xhr.ontimeout = function () {
+        attempt++;
+        if (attempt < NB_ENDPOINTS.length) tryOnce(); else done(new Error('timeout'));
+      };
+      xhr.onerror = function () {
+        attempt++;
+        if (attempt < NB_ENDPOINTS.length) tryOnce(); else done(new Error('network'));
+      };
+      xhr.send('data=' + encodeURIComponent(nbQuery(kind, lat, lng)));
+    })();
+  }
+
+  function nbParse(kind, json, lat, lng) {
+    var out = [], els = (json && json.elements) || [], i, e, p, name;
+    for (i = 0; i < els.length; i++) {
+      e = els[i];
+      p = (typeof e.lat === 'number') ? e : e.center;
+      if (!p || typeof p.lat !== 'number' || typeof p.lon !== 'number') continue;
+      name = (e.tags && e.tags.name) ? String(e.tags.name) : '';
+      if (!name) {
+        if (kind === 'halal') continue;   // unnamed food places are noise
+        name = t('mosque_word');           // an unnamed mosque still matters
+      }
+      out.push({ name: name, lat: p.lat, lng: p.lon,
+                 km: nbHaversineKm(lat, lng, p.lat, p.lon) });
+    }
+    out.sort(function (a, b) { return a.km - b.km; });
+    return out.slice(0, 30);
+  }
+
+  function nbSetPos(lat, lng, isGPS) {
+    var key = nbKey(lat, lng);
+    if (key !== nbCacheKey) {
+      nbCache.mosques = null; nbCache.halal = null; nbCacheKey = key;
+    }
+    nbPos = { lat: lat, lng: lng };
+    nbPosIsGPS = isGPS;
+    var note = el('nb-note');
+    if (!isGPS) {
+      note.textContent = t('nb_using_city').replace('{city}', loc.city);
+      note.style.display = 'block';
+    } else {
+      note.style.display = 'none';
+    }
+  }
+
+  function nbLocate(cb) {
+    var done = false;
+    var timer = setTimeout(fallback, 12000);
+    function gps(lat, lng) {
+      if (done) return; done = true; clearTimeout(timer);
+      nbSetPos(lat, lng, true); cb();
+    }
+    function fallback() {
+      if (done) return; done = true; clearTimeout(timer);
+      nbSetPos(loc.lat, loc.lng, false); cb();
+    }
+    try {
+      var cap = window.Capacitor && window.Capacitor.Plugins &&
+                window.Capacitor.Plugins.Geolocation;
+      if (cap && cap.getCurrentPosition) {
+        cap.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 })
+          .then(function (pos) {
+            if (pos && pos.coords) gps(pos.coords.latitude, pos.coords.longitude);
+            else fallback();
+          }, fallback);
+        return;
+      }
+    } catch (e) { /* fall through to the Web Geolocation API */ }
+    if (navigator.geolocation && navigator.geolocation.getCurrentPosition) {
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        gps(pos.coords.latitude, pos.coords.longitude);
+      }, fallback, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+    } else {
+      fallback();
+    }
+  }
+
+  function nbEnsureMap() {
+    if (nbMap || !window.L || !nbPos) return;
+    nbMap = L.map('nb-map').setView([nbPos.lat, nbPos.lng], 13);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '\u00a9 OpenStreetMap contributors'
+    }).addTo(nbMap);
+    nbLayer = L.layerGroup().addTo(nbMap);
+    nbMeMarker = L.marker([nbPos.lat, nbPos.lng], {
+      icon: L.divIcon({ className: '', html: '<div class="nb-me"></div>',
+                        iconSize: [22, 22], iconAnchor: [11, 11] })
+    }).addTo(nbMap);
+  }
+
+  function nbDrawMap(results) {
+    if (!window.L || !nbPos) return;
+    nbEnsureMap();
+    if (!nbMap) return;
+    if (nbMeMarker) nbMeMarker.setLatLng([nbPos.lat, nbPos.lng]);
+    nbLayer.clearLayers();
+    var pts = [[nbPos.lat, nbPos.lng]], i;
+    for (i = 0; i < results.length; i++) {
+      L.marker([results[i].lat, results[i].lng], {
+        icon: L.divIcon({ className: '', html: '<div class="nb-pin"></div>',
+                          iconSize: [24, 24], iconAnchor: [12, 12] })
+      }).addTo(nbLayer);
+      pts.push([results[i].lat, results[i].lng]);
+    }
+    if (results.length) {
+      try { nbMap.fitBounds(pts, { padding: [24, 24], maxZoom: 15 }); }
+      catch (e) { nbMap.setView([nbPos.lat, nbPos.lng], 13); }
+    } else {
+      nbMap.setView([nbPos.lat, nbPos.lng], 13);
+    }
+    setTimeout(function () { if (nbMap) nbMap.invalidateSize(); }, 60);
+  }
+
+  function nbRender() {
+    el('nbTabMosques').className = nbTab === 'mosques' ? 'nb-on' : '';
+    el('nbTabHalal').className = nbTab === 'halal' ? 'nb-on' : '';
+    el('nb-halalnote').style.display = nbTab === 'halal' ? 'block' : 'none';
+    el('nb-halalnote').textContent = t('nb_halal_note');
+    var results = nbCache[nbTab];
+    var status = el('nb-status'), box = el('nblist');
+    if (!results) {
+      status.textContent = t('nb_finding');
+      status.style.display = 'block';
+      box.innerHTML = '';
+      return;
+    }
+    if (!results.length) {
+      status.textContent = t(nbTab === 'halal' ? 'nb_empty_halal' : 'nb_empty_mosques');
+      status.style.display = 'block';
+      box.innerHTML = '';
+      nbDrawMap(results);
+      return;
+    }
+    status.style.display = 'none';
+    var html = '', i, r;
+    for (i = 0; i < results.length; i++) {
+      r = results[i];
+      html += '<div class="lrow nbrow"><span class="nbname">' + esc(r.name) + '</span>' +
+              '<span class="sub">' + r.km.toFixed(1) + ' km</span>' +
+              '<a class="nbdir" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&amp;destination=' +
+              r.lat + ',' + r.lng + '">' + t('directions') + '</a></div>';
+    }
+    box.innerHTML = html;
+    nbDrawMap(results);
+  }
+
+  function nbLoadTab() {
+    if (!nbPos) { nbRender(); return; }
+    if (nbCache[nbTab]) { nbRender(); return; }
+    nbRender(); // shows the "finding" state
+    if (nbBusy) return;
+    nbBusy = true;
+    var kind = nbTab, lat = nbPos.lat, lng = nbPos.lng, key = nbCacheKey;
+    nbFetch(kind, lat, lng, function (err, json) {
+      nbBusy = false;
+      if (key !== nbCacheKey || screen !== 'nearby') return;
+      if (err) {
+        if (nbTab === kind) {
+          var st = el('nb-status');
+          st.textContent = t('nb_error');
+          st.style.display = 'block';
+        } else {
+          nbLoadTab();
+        }
+        return;
+      }
+      nbCache[kind] = nbParse(kind, json, lat, lng);
+      nbLoadTab(); // render the current tab (or fetch it if still missing)
+    });
+  }
+
+  function nbSetTab(tab) {
+    nbTab = tab;
+    nbLoadTab();
+  }
+
+  function nbRefreshTexts() {
+    el('nbTabMosques').textContent = t('tab_mosques');
+    el('nbTabHalal').textContent = t('tab_halal');
+    el('footNearby').textContent = t('nb_attribution');
+    if (nbPos && !nbPosIsGPS) {
+      el('nb-note').textContent = t('nb_using_city').replace('{city}', loc.city);
+    }
+    if (screen === 'nearby') nbRender();
+  }
+
+  function openNearby() {
+    showScreen('nearby');
+    nbRefreshTexts();
+    if (nbPos) nbLoadTab(); else nbRender();
+    nbLocate(function () {
+      nbEnsureMap();
+      if (nbMap && nbPos) {
+        nbMap.setView([nbPos.lat, nbPos.lng], nbMap.getZoom() || 13);
+        setTimeout(function () { if (nbMap) nbMap.invalidateSize(); }, 60);
+      }
+      nbLoadTab();
+    });
+  }
+
+  el('nbTabMosques').addEventListener('click', function () { nbSetTab('mosques'); });
+  el('nbTabHalal').addEventListener('click', function () { nbSetTab('halal'); });
+  // Directions links: open in the system browser / a new tab rather
+  // than navigating the app's own WebView away from the app.
+  el('nblist').addEventListener('click', function (ev) {
+    var node = ev.target;
+    while (node && node !== el('nblist')) {
+      if (node.tagName === 'A') {
+        ev.preventDefault();
+        window.open(node.href, '_blank');
+        return;
+      }
+      node = node.parentNode;
+    }
   });
 
   /* ---------- Remote key handling ---------- */
