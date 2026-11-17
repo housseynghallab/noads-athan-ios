@@ -29,6 +29,13 @@
 	     held up by the encryption questionnaire. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Nearby: location is requested only when the user opens the
+	     Nearby screen, to show mosques and halal food around them.
+	     The position is never stored or tracked. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>NoAds Athan uses your location only when you open Nearby, to show mosques and halal food around you.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>NoAds Athan uses your location only when you open Nearby, to show mosques and halal food around you.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
