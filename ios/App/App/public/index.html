@@ -304,6 +304,42 @@
      so drop those references instead of shipping the images. */
   .leaflet-control-layers-toggle, .leaflet-default-icon-path { background-image: none; }
 
+  /* My Mosque: followed-mosque page - adhan/iqama table, announcements */
+  .mqtable { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
+  .mqtable th, .mqtable td {
+    padding: 12px 14px; font-size: 27px;
+    border-bottom: 1px solid rgba(245, 241, 230, 0.16);
+  }
+  .mqtable th { color: #e8c877; font-size: 23px; letter-spacing: 0.5px; }
+  .mqtable .mq-t { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mq-explain { font-size: 22px; color: #b9c8e2; text-align: center; margin: 10px 0 14px; }
+  .mq-note { font-size: 24px; color: #ffe9a8; text-align: center; margin: 14px 0; }
+  .mq-center { text-align: center; margin: 10px 0; }
+  .mq-linkbtn {
+    background: transparent; border: 2px solid rgba(232, 200, 119, 0.6);
+    color: #ffd968; font-size: 23px; padding: 7px 22px; border-radius: 999px;
+  }
+  .mqann {
+    padding: 14px 20px; border-radius: 12px; margin-bottom: 12px;
+    border: 2px solid rgba(245, 241, 230, 0.15); font-size: 26px;
+  }
+  .mqann.janaza { border-color: #e8c877; background: rgba(232, 200, 119, 0.12); }
+  .mqann-date { color: #b9c8e2; font-size: 21px; }
+  .mqann-title { font-weight: 700; }
+  .mqann-body { color: #d7e1f2; font-size: 24px; margin-top: 4px; }
+  input.mqtime {
+    font-size: 24px; padding: 6px 10px; border-radius: 8px;
+    border: 2px solid #e8c877; background: #13294b; color: #f5f1e6;
+    font-family: inherit; color-scheme: dark;
+  }
+  /* Nearby mosque rows: Follow toggle for My Mosque */
+  .nbfollow {
+    flex: none; background: transparent; border: 2px solid #e8c877;
+    color: #ffd968; border-radius: 999px; padding: 6px 18px;
+    font-size: 22px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .nbfollow.on { background: #e8c877; color: #0b1e3a; }
+
   /* ---- Phone pass (Android): touch scrolling + small portrait screens ---- */
   [dir="rtl"] .ayah .en { direction: ltr; text-align: left; }
   .lrow, .lhead { cursor: pointer; }
@@ -358,6 +394,16 @@
     #nbRetry { font-size: 16px; padding: 7px 26px; }
     .nbdir { font-size: 15px; padding: 5px 14px; }
     #nb-tabs { gap: 8px; margin-bottom: 8px; }
+    .mqtable th, .mqtable td { padding: 8px 8px; font-size: 16px; }
+    .mqtable th { font-size: 14px; }
+    .mq-explain { font-size: 14px; }
+    .mq-note { font-size: 15px; }
+    .mq-linkbtn { font-size: 14px; padding: 6px 16px; }
+    .mqann { font-size: 16px; padding: 10px 12px; }
+    .mqann-date { font-size: 13px; }
+    .mqann-body { font-size: 15px; }
+    input.mqtime { font-size: 16px; padding: 4px 6px; }
+    .nbfollow { font-size: 15px; padding: 5px 14px; }
   }
 </style>
 </head>
@@ -385,6 +431,7 @@
       <button id="btnHolidays" tabindex="8">Holidays</button><span class="sep">&bull;</span>
       <button id="btnLocation" tabindex="6">Location</button><span class="sep">&bull;</span>
       <button id="btnNearby" tabindex="9">Nearby</button><span class="sep">&bull;</span>
+      <button id="btnMosque" tabindex="10">My Mosque</button><span class="sep">&bull;</span>
       <button id="btnLang" tabindex="7">Language: English</button><span class="sep">&bull;</span>
       <button id="btnAdhan" tabindex="4">Adhan: Classic</button><span class="sep">&bull;</span>
       <button id="btnAsr" tabindex="5">Asr: Hanafi / Shafi'i</button>
@@ -451,6 +498,11 @@
     <div id="nb-retrybox"><button id="nbRetry"></button></div>
     <div id="nblist" class="listbox"></div>
     <div class="scr-foot" id="footNearby">&copy; OpenStreetMap contributors</div>
+  </div>
+
+  <div id="screen-mosque" class="screen">
+    <div class="scr-top"><button id="btnBackMosque" class="btn-back" tabindex="17">&#8592; Back</button><div class="scr-head" id="headMosque">My Mosque</div><div class="scr-spacer"></div></div>
+    <div id="mqbox" class="listbox"></div>
   </div>
 
   <div id="salat-overlay"><div id="salat-pill"></div></div>
@@ -551,6 +603,22 @@
     nb_empty_halal: { en: 'No halal-tagged places found nearby.', fr: 'Aucun lieu \u00e9tiquet\u00e9 halal trouv\u00e9 \u00e0 proximit\u00e9.', ar: 'لم يتم العثور على أماكن موسومة حلال قريبة.' },
     nb_halal_note: { en: 'Places tagged halal on OpenStreetMap \u2014 not every halal restaurant is tagged yet.', fr: 'Lieux \u00e9tiquet\u00e9s halal sur OpenStreetMap \u2014 tous les restaurants halal ne sont pas encore \u00e9tiquet\u00e9s.', ar: 'أماكن موسومة حلال على OpenStreetMap — ليست كل المطاعم الحلال موسومة بعد.' },
     nb_attribution: { en: 'Map data \u00a9 OpenStreetMap contributors', fr: 'Donn\u00e9es cartographiques \u00a9 OpenStreetMap contributors', ar: 'بيانات الخريطة © OpenStreetMap contributors' },
+    my_mosque: { en: 'My Mosque', fr: 'Ma mosquée', ar: 'مسجدي' },
+    prayer_word: { en: 'Prayer', fr: 'Prière', ar: 'الصلاة' },
+    adhan_word: { en: 'Adhan', fr: 'Adhan', ar: 'الأذان' },
+    iqama_word: { en: 'Iqama', fr: 'Iqama', ar: 'الإقامة' },
+    mq_explain: { en: 'Adhan = prayer time begins \u00b7 Iqama = when this mosque prays together', fr: 'Adhan = début de l\u2019heure de prière \u00b7 Iqama = quand cette mosquée prie ensemble', ar: 'الأذان = بداية وقت الصلاة · الإقامة = وقت صلاة الجماعة في هذا المسجد' },
+    choose_mosque: { en: 'Choose your mosque', fr: 'Choisissez votre mosquée', ar: 'اختر مسجدك' },
+    mq_none: { en: 'You are not following a mosque yet.', fr: 'Vous ne suivez aucune mosquée pour le moment.', ar: 'أنت لا تتابع أي مسجد بعد.' },
+    announcements: { en: 'Announcements', fr: 'Annonces', ar: 'الإعلانات' },
+    no_announcements: { en: 'No announcements yet', fr: 'Aucune annonce pour le moment', ar: 'لا توجد إعلانات بعد' },
+    jumuah: { en: "Jumu'ah", fr: "Jumu'ah", ar: 'الجمعة' },
+    edit_iqama: { en: 'Edit iqama', fr: 'Modifier l\u2019iqama', ar: 'تعديل الإقامة' },
+    save: { en: 'Save', fr: 'Enregistrer', ar: 'حفظ' },
+    iqama_not_set: { en: "Iqama not set yet \u2014 tap Edit iqama to enter your mosque's times", fr: 'Pas encore d\u2019iqama \u2014 touchez Modifier l\u2019iqama pour saisir les horaires de votre mosquée', ar: 'الإقامة غير مضبوطة بعد — اضغط «تعديل الإقامة» لإدخال مواقيت مسجدك' },
+    change_mosque: { en: 'Change mosque', fr: 'Changer de mosquée', ar: 'تغيير المسجد' },
+    follow: { en: 'Follow', fr: 'Suivre', ar: 'متابعة' },
+    followed: { en: '\u2605 Followed', fr: '\u2605 Suivie', ar: '\u2605 تتم متابعته' },
     language_label: { en: 'Language: ', fr: 'Langue : ', ar: 'اللغة: ' },
     language_name: { en: 'English', fr: 'Français', ar: 'العربية' },
     back: { en: '\u2190 Back', fr: '\u2190 Retour', ar: 'رجوع' },
@@ -662,10 +730,11 @@
     btnHolidays.textContent = t('holidays_btn');
     btnLocation.textContent = t('location_btn');
     btnNearby.textContent = t('nearby_btn');
+    btnMosque.textContent = t('my_mosque');
     btnLang.textContent = t('language_label') + t('language_name');
     btnAsr.textContent = t('asr_word') + ': ' + t('hanafi') + ' / ' + t('shafii');
     adhanLabel();
-    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby'];
+    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque'];
     for (var bi = 0; bi < bbIds.length; bi++) el(bbIds[bi]).textContent = t('back');
     el('headQList').textContent = t('head_qlist');
     el('headDList').textContent = t('head_dlist');
@@ -698,6 +767,7 @@
     if (screen === 'hol') buildHolidays();
     if (screen === 'loc') buildLocationList();
     nbRefreshTexts();
+    if (screen === 'mosque') mqRender();
     render(new Date());
   }
 
@@ -1309,9 +1379,9 @@
 
   /* ---------- Screens ---------- */
 
-  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc | nearby
+  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc | nearby | mosque
   window.__appScreen = 'home';
-  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location', nearby: 'screen-nearby' };
+  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location', nearby: 'screen-nearby', mosque: 'screen-mosque' };
 
   var btnPlay = el('btnPlay');
   var btnQuran = el('btnQuran');
@@ -1319,10 +1389,11 @@
   var btnHolidays = el('btnHolidays');
   var btnLocation = el('btnLocation');
   var btnNearby = el('btnNearby');
+  var btnMosque = el('btnMosque');
   var btnAdhan = el('btnAdhan');
   var btnAsr = el('btnAsr');
   var btnLang = el('btnLang');
-  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnLocation, btnNearby, btnAdhan, btnAsr, btnLang];
+  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnLocation, btnNearby, btnMosque, btnAdhan, btnAsr, btnLang];
 
   function showScreen(name) {
     screen = name;
@@ -1355,6 +1426,7 @@
     else if (screen === 'hol') { showScreen('home'); }
     else if (screen === 'loc') { showScreen('home'); }
     else if (screen === 'nearby') { showScreen('home'); }
+    else if (screen === 'mosque') { showScreen('home'); }
     // home: stay — Back on the home screen never leaves the app.
   }
 
@@ -1895,9 +1967,10 @@
   btnHolidays.addEventListener('click', function () { openHolidays(); });
   btnLocation.addEventListener('click', function () { openLocation(); });
   btnNearby.addEventListener('click', function () { openNearby(); });
+  btnMosque.addEventListener('click', function () { openMosque(); });
   // Visible "← Back" buttons (Magic Remote pointer users): the same
   // one-level-up step as the Back key.
-  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby'];
+  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque'];
   for (var bb = 0; bb < backBtns.length; bb++) {
     el(backBtns[bb]).addEventListener('click', function () { goBack(); });
   }
@@ -2167,8 +2240,13 @@
     var html = '', i, r;
     for (i = 0; i < results.length; i++) {
       r = results[i];
+      var fol = nbTab === 'mosques' && mqIsFollowed(r);
       html += '<div class="lrow nbrow"><span class="nbname">' + esc(r.name) + '</span>' +
               '<span class="sub">' + r.km.toFixed(1) + ' km</span>' +
+              (nbTab === 'mosques'
+                ? '<button class="nbfollow' + (fol ? ' on' : '') + '" data-nbfollow="' + i + '">' +
+                  (fol ? t('followed') : t('follow')) + '</button>'
+                : '') +
               '<a class="nbdir" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&amp;destination=' +
               r.lat + ',' + r.lng + '">' + t('directions') + '</a></div>';
     }
@@ -2246,6 +2324,235 @@
       }
       node = node.parentNode;
     }
+  });
+  // My Mosque: the Follow toggle on a mosque row sets/clears the
+  // followed mosque. It is a <button>, never inside the Directions
+  // anchor, so the handler above ignores it and this one takes it.
+  el('nblist').addEventListener('click', function (ev) {
+    var node = ev.target;
+    while (node && node !== el('nblist')) {
+      if (node.getAttribute && node.getAttribute('data-nbfollow') !== null) {
+        var i = parseInt(node.getAttribute('data-nbfollow'), 10);
+        var r = (nbCache.mosques || [])[i];
+        if (r) mqToggleFollow(r);
+        return;
+      }
+      node = node.parentNode;
+    }
+  });
+
+  /* ---------- My Mosque: follow one mosque - adhan + iqama, announcements ---------- */
+
+  // The followed mosque is just {name, lat, lng} in localStorage
+  // ('myMosque'), picked from the Nearby mosque results - no account,
+  // nothing is sent anywhere. Iqama times are entered on this screen
+  // ('iqama:<mosque name>') until mosques publish their own feed;
+  // announcements come from a small static JSON per mosque, cached on
+  // the phone ('mosqueFeed:<slug>'). Display slot only: no posting,
+  // no push in this slice.
+  var myMosque = null;
+  try {
+    var savedMosque = JSON.parse(window.localStorage.getItem('myMosque') || 'null');
+    if (savedMosque && typeof savedMosque.name === 'string' &&
+        typeof savedMosque.lat === 'number' && typeof savedMosque.lng === 'number') {
+      myMosque = { name: savedMosque.name, lat: savedMosque.lat, lng: savedMosque.lng };
+    }
+  } catch (e) { /* no mosque followed yet */ }
+
+  var mqEditing = false;
+  var MQ_PRAYERS = [0, 2, 3, 5, 6]; // praytimes indexes: Fajr, Dhuhr, Asr, Maghrib, Isha
+  var MQ_KEYS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumuah'];
+
+  function mqIsFollowed(r) {
+    return !!myMosque && myMosque.name === r.name &&
+           Math.abs(myMosque.lat - r.lat) < 1e-9 && Math.abs(myMosque.lng - r.lng) < 1e-9;
+  }
+
+  function mqToggleFollow(r) {
+    if (mqIsFollowed(r)) {
+      myMosque = null;
+      try { window.localStorage.removeItem('myMosque'); } catch (e) { /* ignore */ }
+    } else {
+      myMosque = { name: r.name, lat: r.lat, lng: r.lng };
+      try { window.localStorage.setItem('myMosque', JSON.stringify(myMosque)); } catch (e) { /* ignore */ }
+    }
+    mqEditing = false;
+    nbRender(); // refresh the Follow / Followed buttons
+  }
+
+  function mqSlug(name) {
+    return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  function mqGetIqama() {
+    var iq = { fajr: '', dhuhr: '', asr: '', maghrib: '', isha: '', jumuah: '' };
+    if (!myMosque) return iq;
+    try {
+      var saved = JSON.parse(window.localStorage.getItem('iqama:' + myMosque.name) || 'null');
+      if (saved) {
+        for (var i = 0; i < MQ_KEYS.length; i++) {
+          if (typeof saved[MQ_KEYS[i]] === 'string') iq[MQ_KEYS[i]] = saved[MQ_KEYS[i]];
+        }
+      }
+    } catch (e) { /* defaults: nothing set */ }
+    return iq;
+  }
+
+  function mqIqamaSet(iq) {
+    for (var i = 0; i < MQ_KEYS.length; i++) if (iq[MQ_KEYS[i]]) return true;
+    return false;
+  }
+
+  // A stored "HH:MM" (24h) in the app's display format; empty -> dash.
+  function mqFmtIqama(v) {
+    if (!v) return '\u2014';
+    var p = String(v).split(':');
+    var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+    if (isNaN(h) || isNaN(m)) return '\u2014';
+    return fmtMin(h * 60 + m);
+  }
+
+  function mqRender() {
+    var box = el('mqbox');
+    if (!myMosque) {
+      el('headMosque').textContent = t('my_mosque');
+      box.innerHTML =
+        '<div class="mq-note">' + esc(t('mq_none')) + '</div>' +
+        '<div class="mq-center"><button id="mqChoose">' + esc(t('choose_mosque')) + '</button></div>';
+      box.scrollTop = 0;
+      return;
+    }
+    el('headMosque').textContent = myMosque.name;
+    // Adhan for the mosque's own coordinates, with the app's current
+    // method / Asr settings - the home screen and the native schedule
+    // keep using the selected city, untouched.
+    var times = PrayTimesLib.timesForDate(new Date(), myMosque.lat, myMosque.lng, asrFactor, loc.method);
+    var iq = mqGetIqama();
+    var html = '<div class="mq-center"><button id="mqChange" class="mq-linkbtn">' +
+               esc(t('change_mosque')) + '</button></div>';
+    html += '<table class="mqtable"><tr><th>' + esc(t('prayer_word')) + '</th><th>' +
+            esc(t('adhan_word')) + '</th><th>' + esc(t('iqama_word')) + '</th></tr>';
+    var i, idx;
+    for (i = 0; i < MQ_PRAYERS.length; i++) {
+      idx = MQ_PRAYERS[i];
+      html += '<tr><td>' + esc(NAMES[idx]) + '</td>' +
+              '<td class="mq-t">' + fmtMin(times[idx]) + '</td>' +
+              '<td class="mq-t">' + (mqEditing
+                ? '<input type="time" class="mqtime" id="iq-' + MQ_KEYS[i] + '" value="' + esc(iq[MQ_KEYS[i]]) + '">'
+                : mqFmtIqama(iq[MQ_KEYS[i]])) + '</td></tr>';
+    }
+    // Jumu'ah replaces Dhuhr on Fridays, so it has no adhan of its
+    // own here - only the mosque's iqama time is shown.
+    html += '<tr><td>' + esc(t('jumuah')) + '</td><td class="mq-t">\u2014</td>' +
+            '<td class="mq-t">' + (mqEditing
+              ? '<input type="time" class="mqtime" id="iq-jumuah" value="' + esc(iq.jumuah) + '">'
+              : mqFmtIqama(iq.jumuah)) + '</td></tr>';
+    html += '</table>';
+    html += '<div class="mq-explain">' + esc(t('mq_explain')) + '</div>';
+    if (!mqEditing && !mqIqamaSet(iq)) {
+      html += '<div class="mq-note">' + esc(t('iqama_not_set')) + '</div>';
+    }
+    html += '<div class="mq-center">' + (mqEditing
+      ? '<button id="mqSave">' + esc(t('save')) + '</button>'
+      : '<button id="mqEdit">' + esc(t('edit_iqama')) + '</button>') + '</div>';
+    html += '<div class="lhead">' + esc(t('announcements')) + '</div>' +
+            '<div id="mqfeed"><div class="mq-note">' + esc(t('loading')) + '</div></div>';
+    box.innerHTML = html;
+    box.scrollTop = 0;
+    mqLoadFeed();
+  }
+
+  function mqRenderFeed(items) {
+    var feed = el('mqfeed');
+    if (!feed) return;
+    if (!items || !items.length) {
+      feed.innerHTML = '<div class="mq-note">' + esc(t('no_announcements')) + '</div>';
+      return;
+    }
+    var sorted = items.slice(0);
+    sorted.sort(function (a, b) {
+      var da = String((a && a.date) || ''), db = String((b && b.date) || '');
+      return da < db ? 1 : (da > db ? -1 : 0);
+    });
+    var html = '', i, it;
+    for (i = 0; i < sorted.length; i++) {
+      it = sorted[i] || {};
+      html += '<div class="mqann' + (it.type === 'janaza' ? ' janaza' : '') + '">' +
+              '<div class="mqann-date">' + esc(it.date || '') + '</div>' +
+              '<div class="mqann-title">' + esc(it.title || '') + '</div>' +
+              (it.body ? '<div class="mqann-body">' + esc(it.body) + '</div>' : '') +
+              '</div>';
+    }
+    feed.innerHTML = html;
+  }
+
+  // Announcements: one small static JSON per mosque on GitHub Pages,
+  // cached on the phone. Any failure (offline, or the mosque is not
+  // publishing yet) falls back to the cache, then to the empty line.
+  function mqLoadFeed() {
+    if (!myMosque) return;
+    var cacheKey = 'mosqueFeed:' + mqSlug(myMosque.name);
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://housseynghallab.github.io/noads-mosques/' +
+             mqSlug(myMosque.name) + '.json', true);
+    xhr.timeout = 8000;
+    var done = false;
+    function fallback() {
+      if (done) return; done = true;
+      var cached = null;
+      try { cached = JSON.parse(window.localStorage.getItem(cacheKey) || 'null'); } catch (e) { /* ignore */ }
+      mqRenderFeed(cached);
+    }
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+      if (xhr.status === 200) {
+        try {
+          var items = JSON.parse(xhr.responseText);
+          if (items && typeof items.length === 'number') {
+            done = true;
+            try { window.localStorage.setItem(cacheKey, JSON.stringify(items)); } catch (e) { /* ignore */ }
+            mqRenderFeed(items);
+            return;
+          }
+        } catch (e) { /* malformed feed: fall back to the cache */ }
+      }
+      fallback();
+    };
+    xhr.ontimeout = fallback;
+    xhr.onerror = fallback;
+    try { xhr.send(); } catch (e) { fallback(); }
+  }
+
+  function mqSaveIqama() {
+    if (!myMosque) return;
+    var iq = {};
+    for (var i = 0; i < MQ_KEYS.length; i++) {
+      var inp = el('iq-' + MQ_KEYS[i]);
+      iq[MQ_KEYS[i]] = inp ? String(inp.value || '') : '';
+    }
+    try { window.localStorage.setItem('iqama:' + myMosque.name, JSON.stringify(iq)); } catch (e) { /* ignore */ }
+    mqEditing = false;
+    mqRender();
+  }
+
+  function openMosque() {
+    mqEditing = false;
+    mqRender();
+    showScreen('mosque');
+  }
+
+  // Delegated clicks for the dynamically built mosque screen.
+  el('mqbox').addEventListener('click', function (ev) {
+    var id = ev.target && ev.target.id;
+    if (id === 'mqChoose') { openNearby(); nbSetTab('mosques'); }
+    else if (id === 'mqChange') {
+      myMosque = null;
+      try { window.localStorage.removeItem('myMosque'); } catch (e) { /* ignore */ }
+      mqEditing = false;
+      mqRender();
+    }
+    else if (id === 'mqEdit') { mqEditing = true; mqRender(); }
+    else if (id === 'mqSave') { mqSaveIqama(); }
   });
 
   /* ---------- Remote key handling ---------- */
@@ -2411,6 +2718,17 @@
         ev.preventDefault();
       }
       else if (k === 13 || k === 32) { selectLocation(); ev.preventDefault(); }
+      else if (k === 461) { goBack(); ev.preventDefault(); } // fallback; central handler normally takes 461
+    } else if (screen === 'mosque') {
+      // The content scrolls like the holidays list. While an iqama
+      // time input has focus (edit mode) the keys belong to the input,
+      // except the Back key, which still leaves the screen.
+      if (ev.target && ev.target.tagName === 'INPUT') {
+        if (k === 461) { goBack(); ev.preventDefault(); }
+        return;
+      }
+      if (k === 40) { el('mqbox').scrollTop += 340; ev.preventDefault(); }
+      else if (k === 38) { el('mqbox').scrollTop -= 340; ev.preventDefault(); }
       else if (k === 461) { goBack(); ev.preventDefault(); } // fallback; central handler normally takes 461
     }
   });
