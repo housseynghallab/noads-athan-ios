@@ -1672,6 +1672,10 @@
   }
 
   function salatTick(now) {
+    if (!notifOn) { // Prayer notifications off (v1.5.5): no in-app alert either
+      if (el('salat-overlay').className === 'on') hideSalatMessage();
+      return;
+    }
     var key = salatWindowKey(now);
     var shown = el('salat-overlay').className === 'on';
     if (key && key !== salatDismissed && (!shown || salatKey !== key)) {
@@ -1730,6 +1734,7 @@
   }
 
   function checkAthan(now) {
+    if (!notifOn) return; // Prayer notifications off (v1.5.5): no in-app alert either
     refreshTimes(now);
     var nowMin = now.getHours() * 60 + now.getMinutes();
     for (var idx in ATHAN_AT) {
@@ -3469,6 +3474,7 @@
   // The background service launched (or relaunched) us for a prayer:
   // show the salat message and run the reminder -> athan chain right away.
   function handleAutoAthan(name, ts) {
+    if (!notifOn) return; // Prayer notifications off (v1.5.5): no in-app alert either
     var idx = -1, i;
     for (i = 0; i < NAMES.length; i++) {
       if (NAMES[i] === name && ATHAN_AT[i]) { idx = i; break; }
