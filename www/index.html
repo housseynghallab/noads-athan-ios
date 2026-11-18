@@ -11,7 +11,8 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
-    width: 100%; height: 100%;
+    width: 100%; height: 100%; max-width: 100%;
+    overflow-x: hidden;
     background: #0b1e3a;
     color: #f5f1e6;
     font-family: "LG Smart", "Segoe UI", Arial, sans-serif;
@@ -22,6 +23,10 @@
     align-items: center; justify-content: flex-start;
     padding: 48px 64px;
   }
+  /* Dynamic viewport height where supported (notches, collapsing
+     browser chrome); engines without dvh keep height: 100%. */
+  body { height: 100dvh; }
+  img { max-width: 100%; }
   /* Haram photo slideshow layers */
   .bglayer {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -34,7 +39,7 @@
     /* v1.2.0 (TV v1.6.0 look): the photo stays bright and vivid — only a
        light shade at the very top (behind the brand row) and a soft dark
        gradient low on the screen behind the prayer cards. */
-    background: linear-gradient(180deg, rgba(4,10,24,0.34) 0%, rgba(4,10,24,0.10) 26%, rgba(4,10,24,0.04) 52%, rgba(4,10,24,0.30) 78%, rgba(4,10,24,0.55) 100%);
+    background: linear-gradient(180deg, rgba(4,10,24,0.44) 0%, rgba(4,10,24,0.22) 26%, rgba(4,10,24,0.16) 52%, rgba(4,10,24,0.42) 78%, rgba(4,10,24,0.66) 100%);
     z-index: 1;
   }
   #screen-home {
@@ -66,15 +71,16 @@
     font-size: 21px; color: #d7e1f2; margin-top: 10px;
     text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.7);
   }
-  /* Huge glowing clock (TV v1.6.0): pale icy blue with a soft layered
-     glow, no backing pill — it sits directly on the photo. */
+  /* Huge glowing clock (TV v1.6.0 shape; v1.5.0 warm-gold tint per
+     the menu-redesign mockup): a soft layered gold glow, no backing
+     pill — it sits directly on the photo. */
   #clock {
     font-size: 172px; font-weight: 700; line-height: 1.05;
     margin-top: 18px; font-variant-numeric: tabular-nums;
-    color: #d9ecff; white-space: nowrap;
-    text-shadow: 0 0 16px rgba(165,208,255,0.85),
-                 0 0 44px rgba(120,182,255,0.55),
-                 0 0 92px rgba(90,150,255,0.35),
+    color: #ffeeb8; white-space: nowrap;
+    text-shadow: 0 0 16px rgba(255,214,110,0.85),
+                 0 0 44px rgba(240,190,80,0.55),
+                 0 0 92px rgba(220,160,50,0.35),
                  0 3px 12px rgba(0,18,46,0.5);
   }
   /* Merged dateline (TV v1.6.0): short date, selected city, next prayer
@@ -108,7 +114,7 @@
     border-radius: 22px;
     padding: 40px 10px 24px;
     text-align: center;
-    box-shadow: 0 10px 28px rgba(0, 8, 24, 0.35);
+    box-shadow: 0 14px 34px rgba(0, 8, 24, 0.38);
   }
   .card .icon { height: 52px; color: #0b1e3a; }
   .card .icon svg { width: 48px; height: 48px; }
@@ -207,11 +213,12 @@
   .lrow.past { opacity: 0.45; }
   #btnListen { margin-inline-start: 16px; }
   /* Hijri date + occasion greeting on the home screen (v1.5.0) */
+  /* Gold Hijri pill (v1.5.0, per the redesign mockup). */
   #hijri {
-    font-size: 27px; color: #e8c877; margin-top: 10px;
-    background: rgba(4,10,24,0.38);
-    padding: 4px 22px; border-radius: 12px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.85);
+    font-size: 27px; font-weight: 700; color: #0b1e3a; margin-top: 12px;
+    background: linear-gradient(180deg, #f6d47c 0%, #dfa92e 100%);
+    padding: 5px 24px; border-radius: 999px;
+    box-shadow: 0 4px 16px rgba(0, 8, 24, 0.40);
   }
   #greeting {
     display: none;
@@ -305,9 +312,9 @@
   .leaflet-control-layers-toggle, .leaflet-default-icon-path { background-image: none; }
 
   /* My Mosque: followed-mosque page - adhan/iqama table, announcements */
-  .mqtable { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
+  .mqtable { width: 100%; max-width: 100%; border-collapse: collapse; margin: 4px 0 8px; table-layout: fixed; }
   .mqtable th, .mqtable td {
-    padding: 12px 14px; font-size: 27px;
+    padding: 12px 14px; font-size: 27px; overflow-wrap: break-word;
     border-bottom: 1px solid rgba(245, 241, 230, 0.16);
   }
   .mqtable th { color: #e8c877; font-size: 23px; letter-spacing: 0.5px; }
@@ -344,7 +351,9 @@
      in the menubar, next to the Adhan / Asr controls. Large touch
      targets; the helper line appears only while a switch is off. */
   .setitem { display: inline-flex; flex-direction: column; align-items: center; }
-  #menubar button.setsw { display: inline-flex; align-items: center; gap: 12px; }
+  #screen-settings .setitem { align-items: flex-start; }
+  #screen-settings .sethelp { text-align: start; }
+  button.setsw { display: inline-flex; align-items: center; gap: 12px; }
   .sw-track {
     flex: none; width: 56px; height: 32px; border-radius: 999px;
     background: rgba(245, 241, 230, 0.25); border: 2px solid rgba(232, 200, 119, 0.6);
@@ -364,6 +373,102 @@
   }
   .sethelp.on { display: block; }
 
+  /* ---- v1.5.0: top bar + drawer navigation, next-prayer bar,
+     bottom Back bars, settings rows ---- */
+  #topbar { width: 100%; display: flex; align-items: center; }
+  #btnMenu {
+    display: none; flex: none; align-items: center; justify-content: center;
+    width: 46px; height: 46px; padding: 0;
+    background: transparent; border: none; color: #e8c877;
+    text-shadow: none; cursor: pointer;
+  }
+  #btnMenu svg { width: 27px; height: 27px; }
+  #topspacer { display: none; flex: none; width: 46px; }
+  #brand { flex: 1; }
+  /* Home "Play Athan" action: a gold pill under the prayer cards
+     (it lived in the bottom menu band before v1.5.0). */
+  #btnPlay {
+    margin-top: 18px; border-radius: 999px;
+    background: linear-gradient(180deg, #f3c969 0%, #dfa92e 100%);
+    border-color: #f6d47c; color: #0b1e3a; font-weight: 700;
+    text-shadow: none;
+  }
+  #btnPlay:focus { background: linear-gradient(180deg, #ffd968 0%, #e8b53a 100%); }
+  /* Bottom next-prayer bar (redesign mockup): navy with gold text,
+     fed by render() alongside the dateline. */
+  #nextbar {
+    margin-top: 18px; width: 100%; max-width: 100%;
+    background: linear-gradient(180deg, #132f57 0%, #0b1e3a 100%);
+    border: 2px solid rgba(232, 200, 119, 0.55); border-radius: 16px;
+    color: #ffd968; font-size: 26px; font-weight: 600;
+    text-align: center; padding: 12px 16px;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.45);
+  }
+  /* Slide-in navigation drawer + scrim. The drawer hugs the leading
+     edge (left in LTR, right in RTL) and sits translated off-canvas
+     until .on is set. */
+  #scrim {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 39;
+    background: rgba(2, 6, 16, 0.55);
+    opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  #scrim.on { opacity: 1; pointer-events: auto; }
+  #drawer {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 40;
+    width: min(320px, 85vw);
+    background: linear-gradient(180deg, rgba(11, 30, 58, 0.97) 0%, rgba(6, 16, 34, 0.98) 100%);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-right: 2px solid rgba(232, 200, 119, 0.5);
+    transform: translateX(-105%); transition: transform 0.25s ease;
+    display: flex; flex-direction: column;
+    padding: calc(18px + env(safe-area-inset-top, 0px)) 14px calc(18px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  #drawer.on { transform: translateX(0); }
+  [dir="rtl"] #drawer {
+    left: auto; right: 0;
+    border-right: none; border-left: 2px solid rgba(232, 200, 119, 0.5);
+    transform: translateX(105%);
+  }
+  [dir="rtl"] #drawer.on { transform: translateX(0); }
+  #drawer-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 4px 8px 16px; margin-bottom: 10px;
+    border-bottom: 1px solid rgba(232, 200, 119, 0.35);
+    color: #ffd968; font-size: 24px; font-weight: 700;
+  }
+  #drawer-head img { width: 40px; height: 40px; border-radius: 10px; }
+  .ditem {
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; margin-bottom: 4px;
+    background: transparent; border: none; border-radius: 14px;
+    color: #f5f1e6; font-size: 23px; font-weight: 400;
+    padding: 13px 14px; text-align: start; text-shadow: none;
+  }
+  .ditem svg { width: 25px; height: 25px; flex: none; color: #e8c877; }
+  .ditem.on {
+    background: linear-gradient(180deg, #f3c969 0%, #dfa92e 100%);
+    color: #0b1e3a; font-weight: 700;
+  }
+  .ditem.on svg { color: #0b1e3a; }
+  /* Bottom Back bar: a thumb-sized target at the bottom of every
+     sub-screen (the top Back button stays as well). The content box
+     above it is flex:1, and margin-top:auto pins the bar to the
+     bottom even when the content is short (Settings). */
+  .botback {
+    flex: none; width: 100%; min-height: 64px; margin-top: auto;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, #132f57 0%, #0b1e3a 100%);
+    border: 2px solid rgba(232, 200, 119, 0.6); border-top: 3px solid #e8c877;
+    border-radius: 14px; color: #ffd968;
+    font-size: 26px; font-weight: 700;
+  }
+  /* Settings screen rows: one full-width control per row. */
+  .setrow {
+    display: block; width: 100%; max-width: 100%;
+    text-align: start; margin-bottom: 14px;
+  }
+
   /* ---- Phone pass (Android): touch scrolling + small portrait screens ---- */
   [dir="rtl"] .ayah .en { direction: ltr; text-align: left; }
   .lrow, .lhead { cursor: pointer; }
@@ -371,8 +476,18 @@
     /* iPhone fit fix: keep content clear of the status bar / Dynamic
        Island (top) and the home indicator (bottom) via safe-area insets. */
     body { padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
-    #screen-home { overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px)); }
-    #brand { gap: 10px; }
+    #screen-home { overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); min-height: 0; }
+    #brand { gap: 10px; justify-content: center; align-self: center; }
+    #btnMenu { display: flex; }
+    #topspacer { display: block; }
+    #place { align-self: center; text-align: center; }
+    #menubar { display: none; }
+    #btnPlay { margin-top: 12px; font-size: 15px; padding: 9px 22px; }
+    #nextbar { font-size: 15px; margin-top: 12px; padding: 9px 12px; border-radius: 12px; }
+    .ditem { font-size: 18px; padding: 12px 12px; }
+    #drawer-head { font-size: 19px; }
+    .botback { min-height: 56px; font-size: 17px; }
+    .setrow { margin-bottom: 10px; }
     #brandlogo { width: 42px; height: 42px; border-radius: 10px; }
     h1 { font-size: 24px; }
     #place { font-size: 13px; margin-top: 6px; }
@@ -381,16 +496,13 @@
     #hijri { font-size: 14px; margin-top: 8px; }
     #nowplaying { font-size: 14px; margin-top: 8px; }
     #greeting { font-size: 16px; margin-top: 12px; padding: 6px 16px; text-align: center; }
-    #times { flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-    .card { flex: 1 1 30%; max-width: none; padding: 30px 4px 12px; border-radius: 14px; }
+    #times { flex-wrap: wrap; gap: 10px; margin-top: 14px; flex: 1 1 auto; min-height: 0; align-content: center; }
+    .card { flex: 1 1 30%; max-width: none; min-height: 0; padding: 30px 4px 12px; border-radius: 18px; }
     .card .icon { height: 30px; }
     .card .icon svg { width: 28px; height: 28px; }
     .card .name { font-size: 14px; margin-top: 4px; }
     .card .time { font-size: 20px; margin-top: 3px; }
     .card .nowtag { font-size: 11px; top: 7px; padding: 1px 10px 2px; }
-    #menubar { padding: 8px 6px calc(10px + env(safe-area-inset-bottom, 0px)); }
-    #menubar .sep { display: none; }
-    #menubar button { font-size: 14px; padding: 7px 12px; border-width: 2px; }
     button { font-size: 16px; padding: 10px 16px; border-radius: 10px; }
     #soundmsg { font-size: 15px; margin-top: 14px; text-align: center; }
     #playing { font-size: 17px; margin-top: 14px; text-align: center; }
@@ -428,13 +540,29 @@
     .mqann-body { font-size: 15px; }
     input.mqtime { font-size: 16px; padding: 4px 6px; }
     .nbfollow { font-size: 15px; padding: 5px 14px; }
-    #menubar button.setsw { gap: 7px; }
+    button.setsw { gap: 7px; }
     .sw-track { width: 40px; height: 24px; }
     .sw-knob { width: 18px; height: 18px; top: 2px; left: 2px; }
     .setsw[aria-checked="true"] .sw-knob { left: 19px; }
     [dir="rtl"] .sw-knob { right: 2px; }
     [dir="rtl"] .setsw[aria-checked="true"] .sw-knob { right: 19px; }
     .sethelp { font-size: 11px; }
+  }
+  /* Short phones (<=700px tall): compact the home column so the whole
+     home screen fits inside 100dvh without scrolling. */
+  @media (max-width: 760px) and (max-height: 700px) {
+    #clock { font-size: clamp(32px, 11vw, 46px); margin-top: 6px; }
+    #dateline { margin-top: 6px; }
+    #hijri { margin-top: 6px; }
+    #greeting { margin-top: 8px; }
+    #times { margin-top: 8px; gap: 8px; }
+    .card { padding: 22px 4px 8px; }
+    .card .icon { height: 24px; }
+    .card .icon svg { width: 22px; height: 22px; }
+    .card .nowtag { top: 5px; }
+    #btnPlay { margin-top: 8px; }
+    #nextbar { margin-top: 8px; }
+    #credits { margin-top: 10px; }
   }
 </style>
 </head>
@@ -444,7 +572,11 @@
   <div id="bgShade"></div>
 
   <div id="screen-home">
-    <div id="brand"><img id="brandlogo" src="logo.png" alt=""><h1>NoAds Athan</h1></div>
+    <div id="topbar">
+      <button id="btnMenu" tabindex="0" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+      <div id="brand"><img id="brandlogo" src="logo.png" alt=""><h1>NoAds Athan</h1></div>
+      <div id="topspacer"></div>
+    </div>
     <div id="place">Montr&eacute;al &middot; Canada &middot; ISNA &middot; Asr: <span id="asrlabel">Hanafi</span></div>
 
     <div id="clock">--:--</div>
@@ -455,19 +587,16 @@
 
     <div id="times"></div>
 
+    <button id="btnPlay" tabindex="1">&#9654; Play Athan</button>
+    <div id="nextbar"></div>
+
     <div id="menubar">
-      <button id="btnPlay" tabindex="1">&#9654; Play Athan</button><span class="sep">&bull;</span>
       <button id="btnQuran" tabindex="2">Quran</button><span class="sep">&bull;</span>
       <button id="btnDuas" tabindex="3">Duas</button><span class="sep">&bull;</span>
       <button id="btnHolidays" tabindex="8">Holidays</button><span class="sep">&bull;</span>
-      <button id="btnLocation" tabindex="6">Location</button><span class="sep">&bull;</span>
       <button id="btnNearby" tabindex="9">Nearby</button><span class="sep">&bull;</span>
       <button id="btnMosque" tabindex="10">My Mosque</button><span class="sep">&bull;</span>
-      <button id="btnLang" tabindex="7">Language: English</button><span class="sep">&bull;</span>
-      <button id="btnAdhan" tabindex="4">Adhan: Classic</button><span class="sep">&bull;</span>
-      <button id="btnAsr" tabindex="5">Asr: Hanafi / Shafi'i</button><span class="sep">&bull;</span>
-      <span class="setitem"><button id="btnSetAthan" class="setsw" role="switch" aria-checked="true" tabindex="11"><span class="sw-track"><span class="sw-knob"></span></span><span id="swAthanLabel">Athan sound</span></button><span class="sethelp" id="helpAthan"></span></span><span class="sep">&bull;</span>
-      <span class="setitem"><button id="btnSetNotif" class="setsw" role="switch" aria-checked="true" tabindex="12"><span class="sw-track"><span class="sw-knob"></span></span><span id="swNotifLabel">Prayer notifications</span></button><span class="sethelp" id="helpNotif"></span></span>
+      <button id="btnSettings" tabindex="11">Settings</button>
     </div>
 
     <div id="soundmsg">Tap anywhere to enable athan sound</div>
@@ -480,6 +609,7 @@
     <div class="scr-top"><button id="btnBackQList" class="btn-back" tabindex="9">&#8592; Back</button><div class="scr-head" id="headQList">Quran &mdash; choose a surah</div><div class="scr-spacer"></div></div>
     <div id="qlist" class="listbox"></div>
     <div class="scr-foot" id="footQList">&#8593;&#8595; choose &middot; &#8592;&#8594; jump &middot; OK open &middot; Back: home</div>
+    <button class="botback" id="botBackQList">&#8592; Back</button>
   </div>
 
   <div id="screen-quran-read" class="screen">
@@ -492,30 +622,35 @@
     </div>
     <div id="qread" class="readbox"></div>
     <div class="scr-foot" id="footQRead">&#8592;&#8594; Back / Listen / Reciter &middot; OK: select &middot; &#8593;&#8595; scroll &middot; Back key: surah list</div>
+    <button class="botback" id="botBackQRead">&#8592; Back</button>
   </div>
 
   <div id="screen-duas-list" class="screen">
     <div class="scr-top"><button id="btnBackDList" class="btn-back" tabindex="11">&#8592; Back</button><div class="scr-head" id="headDList">Duas &amp; Adhkar</div><div class="scr-spacer"></div></div>
     <div id="dlist" class="listbox"></div>
     <div class="scr-foot" id="footDList">&#8593;&#8595; choose &middot; OK open &middot; Back: home</div>
+    <button class="botback" id="botBackDList">&#8592; Back</button>
   </div>
 
   <div id="screen-dua-read" class="screen">
     <div class="scr-top"><button id="btnBackDRead" class="btn-back" tabindex="12">&#8592; Back</button><div class="scr-head" id="dread-title"></div><div class="scr-spacer"></div></div>
     <div id="dread" class="readbox"></div>
     <div class="scr-foot" id="footDRead">&#8593;&#8595; scroll &middot; Back: duas list</div>
+    <button class="botback" id="botBackDRead">&#8592; Back</button>
   </div>
 
   <div id="screen-holidays" class="screen">
     <div class="scr-top"><button id="btnBackHol" class="btn-back" tabindex="13">&#8592; Back</button><div class="scr-head" id="headHol">Islamic Holidays &middot; <span id="hol-year"></span></div><div class="scr-spacer"></div></div>
     <div id="hollist" class="listbox"></div>
     <div class="scr-foot" id="footHol">Dates follow the calculated Islamic calendar and may differ by a day with the sighting of the moon.</div>
+    <button class="botback" id="botBackHol">&#8592; Back</button>
   </div>
 
   <div id="screen-location" class="screen">
     <div class="scr-top"><button id="btnBackLoc" class="btn-back" tabindex="15">&#8592; Back</button><div class="scr-head" id="headLoc">Choose your location</div><div class="scr-spacer"></div></div>
     <div id="loclist" class="listbox"></div>
     <div class="scr-foot" id="footLoc">&#8593;&#8595; choose &middot; &#8592;&#8594; jump &middot; OK select &middot; Back: home</div>
+    <button class="botback" id="botBackLoc">&#8592; Back</button>
   </div>
 
   <div id="screen-nearby" class="screen">
@@ -531,12 +666,39 @@
     <div id="nb-retrybox"><button id="nbRetry"></button></div>
     <div id="nblist" class="listbox"></div>
     <div class="scr-foot" id="footNearby">&copy; OpenStreetMap contributors</div>
+    <button class="botback" id="botBackNearby">&#8592; Back</button>
   </div>
 
   <div id="screen-mosque" class="screen">
     <div class="scr-top"><button id="btnBackMosque" class="btn-back" tabindex="17">&#8592; Back</button><div class="scr-head" id="headMosque">My Mosque</div><div class="scr-spacer"></div></div>
     <div id="mqbox" class="listbox"></div>
+    <button class="botback" id="botBackMosque">&#8592; Back</button>
   </div>
+
+  <div id="screen-settings" class="screen">
+    <div class="scr-top"><button id="btnBackSettings" class="btn-back" tabindex="18">&#8592; Back</button><div class="scr-head" id="headSettings">Settings</div><div class="scr-spacer"></div></div>
+    <div id="setbox" class="listbox">
+      <button id="btnLocation" class="setrow" tabindex="6">Location</button>
+      <button id="btnLang" class="setrow" tabindex="7">Language: English</button>
+      <button id="btnAdhan" class="setrow" tabindex="4">Adhan: Classic</button>
+      <button id="btnAsr" class="setrow" tabindex="5">Asr: Hanafi / Shafi'i</button>
+      <div class="setrow"><span class="setitem"><button id="btnSetAthan" class="setsw" role="switch" aria-checked="true" tabindex="11"><span class="sw-track"><span class="sw-knob"></span></span><span id="swAthanLabel">Athan sound</span></button><span class="sethelp" id="helpAthan"></span></span></div>
+      <div class="setrow"><span class="setitem"><button id="btnSetNotif" class="setsw" role="switch" aria-checked="true" tabindex="12"><span class="sw-track"><span class="sw-knob"></span></span><span id="swNotifLabel">Prayer notifications</span></button><span class="sethelp" id="helpNotif"></span></span></div>
+    </div>
+    <button class="botback" id="botBackSettings">&#8592; Back</button>
+  </div>
+
+  <div id="scrim"></div>
+  <nav id="drawer">
+    <div id="drawer-head"><img src="logo.png" alt=""><span>NoAds Athan</span></div>
+    <button class="ditem" id="dHome"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.3 12 4l8 7.3"/><path d="M6.4 9.8v9.7h11.2V9.8"/><path d="M10 19.5v-5.2h4v5.2"/></svg><span id="dHomeTx">Home</span></button>
+    <button class="ditem" id="dQuran"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.6C6.5 4.1 9.5 4.1 12 5.9c2.5-1.8 5.5-1.8 8-.3v12.9c-2.5-1.5-5.5-1.5-8 .3-2.5-1.8-5.5-1.8-8-.3Z"/><path d="M12 5.9v12.9"/></svg><span id="dQuranTx">Quran</span></button>
+    <button class="ditem" id="dDuas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.4c-3.1-1-5.4-4.2-5.4-8.1V8.2c0-.8 1-1.1 1.5-.5l1 1.2V5.3c0-.9 1.1-1.2 1.6-.5L12 6.5l1.3-1.7c.5-.7 1.6-.4 1.6.5v3.6l1-1.2c.5-.6 1.5-.3 1.5.5v5.1c0 3.9-2.3 7.1-5.4 8.1Z"/><line x1="12" y1="6.5" x2="12" y2="21.4"/></svg><span id="dDuasTx">Duas</span></button>
+    <button class="ditem" id="dHolidays"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="14" rx="2"/><line x1="4" y1="10.5" x2="20" y2="10.5"/><line x1="8.5" y1="3.5" x2="8.5" y2="7"/><line x1="15.5" y1="3.5" x2="15.5" y2="7"/><circle cx="12" cy="15.2" r="1.5"/></svg><span id="dHolidaysTx">Holidays</span></button>
+    <button class="ditem" id="dNearby"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.4-5.5-6.4-10.3A6.4 6.4 0 0 1 12 4.2a6.4 6.4 0 0 1 6.4 6.5C18.4 15.5 12 21 12 21Z"/><circle cx="12" cy="10.5" r="2.3"/></svg><span id="dNearbyTx">Nearby</span></button>
+    <button class="ditem" id="dMosque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.2c2.3 1.9 4.6 3.8 4.6 6.6H7.4c0-2.8 2.3-4.7 4.6-6.6Z"/><line x1="12" y1="2.4" x2="12" y2="5.2"/><line x1="5.4" y1="11.8" x2="5.4" y2="20.5"/><line x1="18.6" y1="11.8" x2="18.6" y2="20.5"/><line x1="3" y1="20.5" x2="21" y2="20.5"/></svg><span id="dMosqueTx">My Mosque</span></button>
+    <button class="ditem" id="dSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4.5" y1="7" x2="19.5" y2="7"/><circle cx="9" cy="7" r="2.1"/><line x1="4.5" y1="12" x2="19.5" y2="12"/><circle cx="15" cy="12" r="2.1"/><line x1="4.5" y1="17" x2="19.5" y2="17"/><circle cx="8" cy="17" r="2.1"/></svg><span id="dSettingsTx">Settings</span></button>
+  </nav>
 
   <div id="salat-overlay"><div id="salat-pill"></div></div>
 
@@ -637,6 +799,8 @@
     nb_halal_note: { en: 'Places tagged halal on OpenStreetMap \u2014 not every halal restaurant is tagged yet.', fr: 'Lieux \u00e9tiquet\u00e9s halal sur OpenStreetMap \u2014 tous les restaurants halal ne sont pas encore \u00e9tiquet\u00e9s.', ar: 'أماكن موسومة حلال على OpenStreetMap — ليست كل المطاعم الحلال موسومة بعد.' },
     nb_attribution: { en: 'Map data \u00a9 OpenStreetMap contributors', fr: 'Donn\u00e9es cartographiques \u00a9 OpenStreetMap contributors', ar: 'بيانات الخريطة © OpenStreetMap contributors' },
     my_mosque: { en: 'My Mosque', fr: 'Ma mosquée', ar: 'مسجدي' },
+    home_btn: { en: 'Home', fr: 'Accueil', ar: 'الرئيسية' },
+    settings_btn: { en: 'Settings', fr: 'Réglages', ar: 'الإعدادات' },
     prayer_word: { en: 'Prayer', fr: 'Prière', ar: 'الصلاة' },
     adhan_word: { en: 'Adhan', fr: 'Adhan', ar: 'الأذان' },
     iqama_word: { en: 'Iqama', fr: 'Iqama', ar: 'الإقامة' },
@@ -768,11 +932,20 @@
     btnLocation.textContent = t('location_btn');
     btnNearby.textContent = t('nearby_btn');
     btnMosque.textContent = t('my_mosque');
+    btnSettings.textContent = t('settings_btn');
+    el('dHomeTx').textContent = t('home_btn');
+    el('dQuranTx').textContent = t('quran_btn');
+    el('dDuasTx').textContent = t('duas_btn');
+    el('dHolidaysTx').textContent = t('holidays_btn');
+    el('dNearbyTx').textContent = t('nearby_btn');
+    el('dMosqueTx').textContent = t('my_mosque');
+    el('dSettingsTx').textContent = t('settings_btn');
+    el('headSettings').textContent = t('settings_btn');
     btnLang.textContent = t('language_label') + t('language_name');
     btnAsr.textContent = t('asr_word') + ': ' + t('hanafi') + ' / ' + t('shafii');
     adhanLabel();
     refreshSettingsUI();
-    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque'];
+    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque', 'btnBackSettings', 'botBackQList', 'botBackQRead', 'botBackDList', 'botBackDRead', 'botBackHol', 'botBackLoc', 'botBackNearby', 'botBackMosque', 'botBackSettings'];
     for (var bi = 0; bi < bbIds.length; bi++) el(bbIds[bi]).textContent = t('back');
     el('headQList').textContent = t('head_qlist');
     el('headDList').textContent = t('head_dlist');
@@ -1172,21 +1345,26 @@
 
     // Merged dateline (TV v1.6.0): short date, selected city, next
     // prayer and its countdown on one line, all localized.
-    var nextName, nextDiff;
+    var nextName, nextDiff, nextAtMin;
     if (nextIdx >= 0) {
       nextName = NAMES[nextIdx];
       nextDiff = todayTimes[nextIdx] * 60000 - nowMs;
+      nextAtMin = todayTimes[nextIdx];
     } else {
       // all of today's times passed: next is tomorrow's Fajr
       var tomorrow = new Date(now.getTime() + 86400000);
       var tTimes = PrayTimesLib.timesForDate(tomorrow, loc.lat, loc.lng, asrFactor, loc.method);
       nextName = NAMES[0];
       nextDiff = (1440 + tTimes[0]) * 60000 - nowMs;
+      nextAtMin = 1440 + tTimes[0];
     }
     el('dateline').textContent =
       now.toLocaleDateString(LOCALE(), { weekday: 'short', month: 'short', day: 'numeric' }) +
       ' \u2022 ' + loc.city + ' \u2022 ' +
       nextName + ' ' + t('in_word') + ' ' + fmtShortCountdown(nextDiff);
+    // Bottom next-prayer bar (v1.5.0): the same "next" fact as the
+    // dateline, in the mockup's bar form ("Next: Maghrib at 4:25 PM").
+    el('nextbar').textContent = t('next_word') + ': ' + nextName + ' ' + t('at_word') + ' ' + fmtMin(nextAtMin);
 
     // build cards
     var html = '';
@@ -1274,6 +1452,7 @@
       hideSalatMessage();
       return;
     }
+    if (drawerOpen) { closeDrawer(); return; }
     goBack();
   }, true);
 
@@ -1285,6 +1464,7 @@
       hideSalatMessage();
       return;
     }
+    if (drawerOpen) { closeDrawer(); return; }
     goBack();
   });
 
@@ -1431,9 +1611,9 @@
 
   /* ---------- Screens ---------- */
 
-  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc | nearby | mosque
+  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc | nearby | mosque | settings
   window.__appScreen = 'home';
-  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location', nearby: 'screen-nearby', mosque: 'screen-mosque' };
+  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location', nearby: 'screen-nearby', mosque: 'screen-mosque', settings: 'screen-settings' };
 
   var btnPlay = el('btnPlay');
   var btnQuran = el('btnQuran');
@@ -1447,7 +1627,13 @@
   var btnLang = el('btnLang');
   var btnSetAthan = el('btnSetAthan');
   var btnSetNotif = el('btnSetNotif');
-  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnLocation, btnNearby, btnMosque, btnAdhan, btnAsr, btnLang, btnSetAthan, btnSetNotif];
+  var btnSettings = el('btnSettings');
+  var btnMenu = el('btnMenu');
+  // Home remote focus ring: only the controls visible on the home
+  // screen (the wide-layout menu band + the Play Athan pill).
+  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnNearby, btnMosque, btnSettings];
+  // Settings screen focus ring: the global options live there now.
+  var SET_BTNS = [btnLocation, btnLang, btnAdhan, btnAsr, btnSetAthan, btnSetNotif];
 
   function showScreen(name) {
     screen = name;
@@ -1456,6 +1642,7 @@
     for (var k in SCREEN_IDS) {
       el(SCREEN_IDS[k]).className = 'screen' + (k === name ? ' on' : '');
     }
+    refreshDrawerActive();
     if (name === 'home') {
       try { btnPlay.focus(); } catch (e) { /* ignore */ }
     } else if (document.activeElement && document.activeElement.blur) {
@@ -1481,7 +1668,41 @@
     else if (screen === 'loc') { showScreen('home'); }
     else if (screen === 'nearby') { showScreen('home'); }
     else if (screen === 'mosque') { showScreen('home'); }
+    else if (screen === 'settings') { showScreen('home'); }
     // home: stay — Back on the home screen never leaves the app.
+  }
+
+  /* ---------- Drawer navigation (v1.5.0) ---------- */
+
+  var drawerOpen = false;
+  var DRAWER_FOR = { home: 'dHome', qlist: 'dQuran', qread: 'dQuran', dlist: 'dDuas', dread: 'dDuas', hol: 'dHolidays', loc: 'dSettings', nearby: 'dNearby', mosque: 'dMosque', settings: 'dSettings' };
+  var DRAWER_ITEMS = ['dHome', 'dQuran', 'dDuas', 'dHolidays', 'dNearby', 'dMosque', 'dSettings'];
+
+  function refreshDrawerActive() {
+    var want = DRAWER_FOR[screen] || 'dHome';
+    for (var i = 0; i < DRAWER_ITEMS.length; i++) {
+      var it = el(DRAWER_ITEMS[i]);
+      if (it) it.className = 'ditem' + (DRAWER_ITEMS[i] === want ? ' on' : '');
+    }
+  }
+
+  function openDrawer() {
+    drawerOpen = true;
+    el('drawer').className = 'on';
+    el('scrim').className = 'on';
+    refreshDrawerActive();
+  }
+
+  function closeDrawer() {
+    if (!drawerOpen) return;
+    drawerOpen = false;
+    el('drawer').className = '';
+    el('scrim').className = '';
+  }
+
+  function openSettings() {
+    showScreen('settings');
+    try { btnLocation.focus(); } catch (e) { /* ignore */ }
   }
 
   function loadScript(src, cb) {
@@ -2042,10 +2263,28 @@
   btnMosque.addEventListener('click', function () { openMosque(); });
   // Visible "← Back" buttons (Magic Remote pointer users): the same
   // one-level-up step as the Back key.
-  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque'];
+  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque', 'btnBackSettings', 'botBackQList', 'botBackQRead', 'botBackDList', 'botBackDRead', 'botBackHol', 'botBackLoc', 'botBackNearby', 'botBackMosque', 'botBackSettings'];
   for (var bb = 0; bb < backBtns.length; bb++) {
     el(backBtns[bb]).addEventListener('click', function () { goBack(); });
   }
+
+  // Drawer (v1.5.0): the hamburger opens it, the scrim closes it, and
+  // every item navigates through the existing open*/showScreen paths,
+  // closing the drawer first. The wide-layout menu band gains a
+  // Settings entry for the same screen.
+  btnMenu.addEventListener('click', function () { openDrawer(); });
+  el('scrim').addEventListener('click', function () { closeDrawer(); });
+  function drawerGo(fn) {
+    return function () { closeDrawer(); fn(); };
+  }
+  el('dHome').addEventListener('click', drawerGo(function () { showScreen('home'); }));
+  el('dQuran').addEventListener('click', drawerGo(function () { openQuran(); }));
+  el('dDuas').addEventListener('click', drawerGo(function () { openDuas(); }));
+  el('dHolidays').addEventListener('click', drawerGo(function () { openHolidays(); }));
+  el('dNearby').addEventListener('click', drawerGo(function () { openNearby(); }));
+  el('dMosque').addEventListener('click', drawerGo(function () { openMosque(); }));
+  el('dSettings').addEventListener('click', drawerGo(function () { openSettings(); }));
+  btnSettings.addEventListener('click', function () { openSettings(); });
 
   // Language button: cycle EN -> FR -> AR and remember the choice.
   btnLang.addEventListener('click', function () {
@@ -2818,8 +3057,61 @@
       if (k === 40) { el('mqbox').scrollTop += 340; ev.preventDefault(); }
       else if (k === 38) { el('mqbox').scrollTop -= 340; ev.preventDefault(); }
       else if (k === 461) { goBack(); ev.preventDefault(); } // fallback; central handler normally takes 461
+    } else if (screen === 'settings') {
+      // The global options are full-width rows: the arrows move a
+      // focus ring over them and OK activates the focused control.
+      if (k === 37 || k === 38 || k === 39 || k === 40) {
+        var si = SET_BTNS.indexOf(document.activeElement);
+        if (si < 0) si = 0;
+        else si = (si + ((k === 39 || k === 40) ? 1 : SET_BTNS.length - 1)) % SET_BTNS.length;
+        SET_BTNS[si].focus();
+        ev.preventDefault();
+      } else if (k === 13 || k === 32) {
+        var sa = document.activeElement;
+        if (SET_BTNS.indexOf(sa) >= 0) { sa.click(); ev.preventDefault(); }
+      } else if (k === 461) { goBack(); ev.preventDefault(); } // fallback; central handler normally takes 461
     }
   });
+
+  /* ---------- Edge swipe (v1.5.0) ---------- */
+
+  // A swipe that starts within 24px of the leading edge (left in LTR,
+  // right in RTL) and travels >= 60px toward the center with little
+  // vertical drift means: close the drawer if it is open, go Back if
+  // a sub-screen is showing, or open the drawer on the home screen.
+  // Touches that begin on the Nearby map (Leaflet drag-pans it) or in
+  // horizontally scrolling content never arm the gesture, and both
+  // listeners are passive: vertical scrolling is never intercepted.
+  var swipeArmed = false, swipeX = 0, swipeY = 0;
+  document.addEventListener('touchstart', function (ev) {
+    swipeArmed = false;
+    if (!ev.changedTouches || !ev.changedTouches.length) return;
+    var node = ev.target;
+    while (node && node !== document) {
+      if (node.id === 'nb-map') return;
+      if (typeof node.className === 'string' && node.className.indexOf('hscroll') >= 0) return;
+      node = node.parentNode;
+    }
+    var tch = ev.changedTouches[0];
+    var w = window.innerWidth || 0;
+    var atEdge = (lang === 'ar') ? (tch.clientX >= w - 24) : (tch.clientX <= 24);
+    if (!atEdge) return;
+    swipeX = tch.clientX; swipeY = tch.clientY; swipeArmed = true;
+  }, { passive: true });
+  document.addEventListener('touchend', function (ev) {
+    if (!swipeArmed) return;
+    swipeArmed = false;
+    if (el('salat-overlay').className === 'on') return;
+    if (!ev.changedTouches || !ev.changedTouches.length) return;
+    var tch = ev.changedTouches[0];
+    var dx = tch.clientX - swipeX, dy = tch.clientY - swipeY;
+    if (Math.abs(dy) >= 40) return;
+    var toward = (lang === 'ar') ? (dx <= -60) : (dx >= 60);
+    if (!toward) return;
+    if (drawerOpen) { closeDrawer(); return; }
+    if (screen !== 'home') { goBack(); return; }
+    openDrawer();
+  }, { passive: true });
 
   /* ---------- Background service integration (v1.2.0) ---------- */
 
