@@ -14,7 +14,11 @@
  *     generatedAt: <epoch ms>,
  *     settings: { lat, lng, method, asrFactor,
  *                 adhanId: 0..3,            // index into ADHAN_FILES
- *                 lang: 'en' | 'fr' | 'ar' },
+ *                 lang: 'en' | 'fr' | 'ar',
+ *                 athanMuted: bool,         // v1.4.1 'Athan sound' off:
+ *                                           // notify without the sound
+ *                 notificationsOff: bool }, // v1.4.1 'Prayer
+ *                                           // notifications' off: none
  *     days: [ {
  *       date: 'YYYY-MM-DD',
  *       prayers: { fajr: <epoch ms>, dhuhr: ..., asr: ...,
@@ -127,6 +131,18 @@
     if (adhanId < 0 || adhanId > 3) adhanId = 0;
     var sound = 'athan' + (adhanId + 1) + '.caf';
 
+    // Settings switches (v1.4.1). Absent flags keep the old behavior.
+    var athanMuted = !!(payload.settings && payload.settings.athanMuted);
+    var notificationsOff = !!(payload.settings && payload.settings.notificationsOff);
+    if (notificationsOff) {
+      // No prayer alerts at all: drop everything already scheduled
+      // and schedule nothing until a later payload turns them back on.
+      var offIds = loadStoredIds();
+      storeIds([]);
+      cancelIds(plugin, offIds);
+      return;
+    }
+
     var now = Date.now();
     var notifications = [];
     var newIds = [];
@@ -139,14 +155,17 @@
         if (typeof when !== 'number' || when <= now) continue; // already passed
         // Stable, unique-per-prayer-minute id (fits in a signed 32-bit int).
         var id = Math.floor(when / 60000);
-        notifications.push({
+        var notif = {
           id: id,
           title: day.salatMessage || "It's time for Salat!",
           body: (day.names && day.names[key]) || key,
           schedule: { at: new Date(when), allowWhileIdle: true },
-          sound: sound,
           extra: { prayer: key, date: day.date || '' }
-        });
+        };
+        // Athan sound off (v1.4.1): the notification still shows its
+        // title/body, just silently — no 'sound' field at all.
+        if (!athanMuted) notif.sound = sound;
+        notifications.push(notif);
         newIds.push(id);
       }
     }
