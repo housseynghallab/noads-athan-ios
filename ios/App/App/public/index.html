@@ -13,6 +13,7 @@
   html, body {
     width: 100%; height: 100%; max-width: 100%;
     overflow-x: hidden;
+    -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
     background: #0b1e3a;
     color: #f5f1e6;
     font-family: "LG Smart", "Segoe UI", Arial, sans-serif;
@@ -36,10 +37,10 @@
   }
   #bgShade {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    /* v1.2.0 (TV v1.6.0 look): the photo stays bright and vivid — only a
-       light shade at the very top (behind the brand row) and a soft dark
-       gradient low on the screen behind the prayer cards. */
-    background: linear-gradient(180deg, rgba(4,10,24,0.44) 0%, rgba(4,10,24,0.22) 26%, rgba(4,10,24,0.16) 52%, rgba(4,10,24,0.42) 78%, rgba(4,10,24,0.66) 100%);
+    /* v1.5.1 (menu-redesign mockup): a deep navy veil over the whole
+       photo so the home screen reads navy end to end; the photo still
+       shows through softly behind the cards. */
+    background: linear-gradient(180deg, rgba(6,17,38,0.80) 0%, rgba(6,17,38,0.72) 45%, rgba(6,17,38,0.78) 75%, rgba(6,17,38,0.86) 100%);
     z-index: 1;
   }
   #screen-home {
@@ -126,6 +127,15 @@
     font-size: 45px; font-weight: 700; margin-top: 6px; color: #0b1e3a;
     font-variant-numeric: tabular-nums; white-space: nowrap;
   }
+  /* Row content wrapper (v1.5.1): name + status stacked beside the
+     icon; on wide layouts it simply flows under the icon as before. */
+  .cardmain { min-width: 0; }
+  .card .status {
+    font-size: 20px; font-weight: 600; color: #54677f; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card.now-card .status { color: #5c430a; }
+  .card.next-prayer .status { color: #ffd968; }
   .card .nowtag {
     position: absolute; top: 12px; left: 50%;
     -webkit-transform: translateX(-50%); transform: translateX(-50%);
@@ -491,18 +501,37 @@
     #brandlogo { width: 42px; height: 42px; border-radius: 10px; }
     h1 { font-size: 24px; }
     #place { font-size: 13px; margin-top: 6px; }
-    #clock { font-size: 60px; margin-top: 10px; }
-    #dateline { font-size: 15px; margin-top: 8px; white-space: normal; text-align: center; }
+    /* v1.5.1: the clock can never be wider than the screen — sized
+       from the viewport with a hard min() ceiling, in normal flow at
+       full width, wrapping (never clipping) as a last resort. Gold
+       per the redesign mockup. */
+    #clock {
+      font-size: clamp(42px, 11.5vw, 66px);
+      font-size: min(66px, 11.5vw);
+      white-space: normal; width: 100%; text-align: center;
+      color: #f5d67b; line-height: 1.05; margin-top: 10px;
+    }
+    #dateline { font-size: 15px; margin-top: 8px; white-space: normal; text-align: center; width: 100%; }
     #hijri { font-size: 14px; margin-top: 8px; }
     #nowplaying { font-size: 14px; margin-top: 8px; }
     #greeting { font-size: 16px; margin-top: 12px; padding: 6px 16px; text-align: center; }
-    #times { flex-wrap: wrap; gap: 10px; margin-top: 14px; flex: 1 1 auto; min-height: 0; align-content: center; }
-    .card { flex: 1 1 30%; max-width: none; min-height: 0; padding: 30px 4px 12px; border-radius: 18px; }
-    .card .icon { height: 30px; }
-    .card .icon svg { width: 28px; height: 28px; }
-    .card .name { font-size: 14px; margin-top: 4px; }
-    .card .time { font-size: 20px; margin-top: 3px; }
-    .card .nowtag { font-size: 11px; top: 7px; padding: 1px 10px 2px; }
+    /* v1.5.1: single-column prayer rows (mockup) — icon at the
+       leading edge, name + status stacked, big time at the trailing
+       edge. Rows flex-shrink so home fits 100dvh without scrolling. */
+    #times { flex-direction: column; flex-wrap: nowrap; gap: 8px; margin-top: 12px; flex: 1 1 auto; min-height: 0; width: 100%; justify-content: center; }
+    .card {
+      flex: 1 1 0; min-height: 0; width: 100%; max-width: none;
+      display: flex; flex-direction: row; align-items: center;
+      text-align: start; padding: 6px 14px; border-radius: 16px;
+      overflow: hidden;
+    }
+    .card .icon { height: auto; flex: none; display: flex; align-items: center; }
+    .card .icon svg { width: 26px; height: 26px; }
+    .cardmain { flex: 1 1 auto; margin-inline-start: 12px; }
+    .card .name { font-size: 16px; margin-top: 0; }
+    .card .status { font-size: 12px; margin-top: 2px; }
+    .card .time { font-size: 22px; margin-top: 0; margin-inline-start: 10px; flex: none; }
+    .card .nowtag { position: static; -webkit-transform: none; transform: none; display: inline-block; font-size: 11px; padding: 1px 10px 2px; }
     button { font-size: 16px; padding: 10px 16px; border-radius: 10px; }
     #soundmsg { font-size: 15px; margin-top: 14px; text-align: center; }
     #playing { font-size: 17px; margin-top: 14px; text-align: center; }
@@ -551,15 +580,16 @@
   /* Short phones (<=700px tall): compact the home column so the whole
      home screen fits inside 100dvh without scrolling. */
   @media (max-width: 760px) and (max-height: 700px) {
-    #clock { font-size: clamp(32px, 11vw, 46px); margin-top: 6px; }
+    #clock { font-size: min(46px, 11.5vw); margin-top: 6px; }
     #dateline { margin-top: 6px; }
     #hijri { margin-top: 6px; }
     #greeting { margin-top: 8px; }
-    #times { margin-top: 8px; gap: 8px; }
-    .card { padding: 22px 4px 8px; }
-    .card .icon { height: 24px; }
+    #times { margin-top: 8px; gap: 6px; }
+    .card { padding: 3px 12px; }
     .card .icon svg { width: 22px; height: 22px; }
-    .card .nowtag { top: 5px; }
+    .card .name { font-size: 15px; }
+    .card .status { font-size: 11px; margin-top: 1px; }
+    .card .time { font-size: 20px; }
     #btnPlay { margin-top: 8px; }
     #nextbar { margin-top: 8px; }
     #credits { margin-top: 10px; }
@@ -1373,11 +1403,17 @@
       var cls = 'card';
       if (idx === goldIdx) cls += ' now-card';
       else if (idx === nextIdx) cls += ' next-prayer';
+      // v1.5.1 row layout: icon, then name + a status line (the Now
+      // pill on the gold card; the already-computed countdown on the
+      // next card — the same fragment the dateline shows), then time.
+      var statusHtml = '';
+      if (idx === goldIdx) statusHtml = '<span class="nowtag">' + t('now_tag') + '</span>';
+      else if (idx === nextIdx) statusHtml = t('in_word') + ' ' + fmtShortCountdown(nextDiff);
       html += '<div class="' + cls + '">' +
-              (idx === goldIdx ? '<div class="nowtag">' + t('now_tag') + '</div>' : '') +
               '<div class="icon">' + CARD_ICONS[idx] + '</div>' +
-              '<div class="name">' + NAMES[idx] +
-              '</div><div class="time">' + fmtMin(todayTimes[idx]) +
+              '<div class="cardmain"><div class="name">' + NAMES[idx] +
+              '</div><div class="status">' + statusHtml +
+              '</div></div><div class="time">' + fmtMin(todayTimes[idx]) +
               '</div></div>';
     }
     el('times').innerHTML = html;
