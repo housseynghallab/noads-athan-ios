@@ -37,10 +37,10 @@
   }
   #bgShade {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    /* v1.5.1 (menu-redesign mockup): a deep navy veil over the whole
-       photo so the home screen reads navy end to end; the photo still
-       shows through softly behind the cards. */
-    background: linear-gradient(180deg, rgba(6,17,38,0.80) 0%, rgba(6,17,38,0.72) 45%, rgba(6,17,38,0.78) 75%, rgba(6,17,38,0.86) 100%);
+    /* v1.5.2 (design drawing): a lighter navy-glass veil — the mosque
+       photo clearly shows through ("mosque at dusk under navy glass"),
+       deepening toward the bottom so the text stays readable. */
+    background: linear-gradient(180deg, rgba(8,20,44,0.45) 0%, rgba(8,20,44,0.50) 45%, rgba(8,20,44,0.56) 75%, rgba(8,20,44,0.62) 100%);
     z-index: 1;
   }
   #screen-home {
@@ -72,25 +72,45 @@
     font-size: 21px; color: #d7e1f2; margin-top: 10px;
     text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.7);
   }
-  /* Huge glowing clock (TV v1.6.0 shape; v1.5.0 warm-gold tint per
-     the menu-redesign mockup): a soft layered gold glow, no backing
+  /* Elegant glowing clock (v1.5.2, per the design drawing): light
+     weight with a soft layered gold glow, no backing
      pill — it sits directly on the photo. */
   #clock {
-    font-size: 172px; font-weight: 700; line-height: 1.05;
+    font-size: 172px; font-weight: 300; letter-spacing: 0.5px;
+    line-height: 1.05;
     margin-top: 18px; font-variant-numeric: tabular-nums;
-    color: #ffeeb8; white-space: nowrap;
-    text-shadow: 0 0 16px rgba(255,214,110,0.85),
-                 0 0 44px rgba(240,190,80,0.55),
-                 0 0 92px rgba(220,160,50,0.35),
-                 0 3px 12px rgba(0,18,46,0.5);
+    color: #f3d98b; white-space: nowrap;
+    text-shadow: 0 0 18px rgba(243,217,139,0.55),
+                 0 0 48px rgba(240,200,100,0.35),
+                 0 0 96px rgba(220,170,60,0.22),
+                 0 2px 10px rgba(0,18,46,0.45);
   }
-  /* Merged dateline (TV v1.6.0): short date, selected city, next prayer
-     and its countdown on one white line with a soft shadow, no pill. */
-  #dateline {
-    font-size: 31px; font-weight: 600; color: #ffffff; margin-top: 14px;
-    white-space: nowrap;
+  /* Date pill (v1.5.2, per the design drawing): ONE gold translucent
+     pill holding the Gregorian date (#dateline) and the Hijri date
+     (#hijri) together. Below it, #nextline carries the city + next
+     prayer countdown on one white line. */
+  #datepill {
+    display: inline-flex; align-items: center; gap: 12px;
+    align-self: center; max-width: 100%;
+    margin-top: 16px; padding: 8px 30px; border-radius: 999px;
+    background: linear-gradient(180deg, rgba(246,212,124,0.92) 0%, rgba(223,169,46,0.92) 100%);
+    color: #0b1e3a; font-size: 28px; font-weight: 700;
+    box-shadow: 0 4px 16px rgba(0, 8, 24, 0.40);
+  }
+  #datepill #dateline, #datepill #hijri {
+    font-size: inherit; font-weight: inherit; color: inherit;
+    margin: 0; padding: 0; background: none; box-shadow: none;
+    text-shadow: none; white-space: nowrap;
+  }
+  #datepill .pillsep { opacity: 0.65; }
+  #nextline {
+    font-size: 27px; font-weight: 600; color: #ffffff; margin-top: 12px;
+    text-align: center;
     text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.65);
   }
+  /* "Prayer Times" heading above the list (v1.5.2, drawing): shown by
+     the phone pass; the wide layout keeps its clean look. */
+  #timeshead { display: none; }
   /* Now-playing pill (TV v1.6.1): shown on the home screen while a
      Quran recitation keeps playing after navigating back home. */
   #nowplaying {
@@ -111,11 +131,12 @@
   .card {
     flex: 1 1 0; max-width: 262px; position: relative;
     background: rgba(255, 255, 255, 0.94);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
     border: 2px solid rgba(255, 255, 255, 0.94);
     border-radius: 22px;
     padding: 40px 10px 24px;
     text-align: center;
-    box-shadow: 0 14px 34px rgba(0, 8, 24, 0.38);
+    box-shadow: 0 10px 28px rgba(0, 8, 24, 0.30);
   }
   .card .icon { height: 52px; color: #0b1e3a; }
   .card .icon svg { width: 48px; height: 48px; }
@@ -143,13 +164,23 @@
     font-size: 19px; font-weight: 700; letter-spacing: 1px;
     padding: 3px 16px 4px; border-radius: 999px; white-space: nowrap;
   }
+  /* "Next" pill (v1.5.2): inline in the status line of the navy
+     next-prayer card — dark pill with gold text and edge. */
+  .card .nexttag {
+    display: inline-block;
+    background: #0b1e3a; color: #ffd968;
+    border: 1px solid rgba(232, 200, 119, 0.7);
+    font-size: 19px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 2px 14px 3px; border-radius: 999px; white-space: nowrap;
+    margin-inline-end: 8px;
+  }
   .card.now-card {
     background: linear-gradient(180deg, #f3c969 0%, #dfa92e 100%);
     border-color: #f6d47c;
   }
   .card.next-prayer {
-    background: #10294f;
-    border-color: #10294f;
+    background: rgba(13, 32, 64, 0.94);
+    border-color: rgba(232, 200, 119, 0.85);
   }
   .card.next-prayer .name, .card.next-prayer .time { color: #ffffff; }
   .card.next-prayer .icon { color: #e8c877; }
@@ -223,13 +254,9 @@
   .lrow.past { opacity: 0.45; }
   #btnListen { margin-inline-start: 16px; }
   /* Hijri date + occasion greeting on the home screen (v1.5.0) */
-  /* Gold Hijri pill (v1.5.0, per the redesign mockup). */
-  #hijri {
-    font-size: 27px; font-weight: 700; color: #0b1e3a; margin-top: 12px;
-    background: linear-gradient(180deg, #f6d47c 0%, #dfa92e 100%);
-    padding: 5px 24px; border-radius: 999px;
-    box-shadow: 0 4px 16px rgba(0, 8, 24, 0.40);
-  }
+  /* v1.5.2: the Hijri date shares the gold #datepill with the
+     Gregorian date (see the #datepill rules near #dateline) —
+     #hijri itself carries no box styling of its own. */
   #greeting {
     display: none;
     font-size: 34px; font-weight: 600; color: #ffe9a8; margin-top: 22px;
@@ -501,18 +528,26 @@
     #brandlogo { width: 42px; height: 42px; border-radius: 10px; }
     h1 { font-size: 24px; }
     #place { font-size: 13px; margin-top: 6px; }
-    /* v1.5.1: the clock can never be wider than the screen — sized
+    /* v1.5.2: the clock can never be wider than the screen — sized
        from the viewport with a hard min() ceiling, in normal flow at
-       full width, wrapping (never clipping) as a last resort. Gold
-       per the redesign mockup. */
+       full width, wrapping (never clipping) as a last resort.
+       Elegant per the design drawing: light weight, letter-spaced,
+       pale gold #f3d98b with the soft layered glow of the base rule. */
     #clock {
-      font-size: clamp(42px, 11.5vw, 66px);
-      font-size: min(66px, 11.5vw);
+      font-size: min(74px, 13vw);
+      font-weight: 300; letter-spacing: 0.5px;
       white-space: normal; width: 100%; text-align: center;
-      color: #f5d67b; line-height: 1.05; margin-top: 10px;
+      color: #f3d98b; line-height: 1.05; margin-top: 10px;
     }
-    #dateline { font-size: 15px; margin-top: 8px; white-space: normal; text-align: center; width: 100%; }
-    #hijri { font-size: 14px; margin-top: 8px; }
+    #datepill { font-size: 14px; margin-top: 8px; padding: 5px 18px; gap: 8px; }
+    #datepill #dateline, #datepill #hijri { white-space: normal; }
+    #nextline { font-size: 15px; margin-top: 8px; width: 100%; }
+    #timeshead {
+      display: block; align-self: flex-start;
+      font-size: 19px; font-weight: 700; color: #ffffff;
+      margin-top: 14px; letter-spacing: 0.3px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.85), 0 0 5px rgba(0,0,0,0.6);
+    }
     #nowplaying { font-size: 14px; margin-top: 8px; }
     #greeting { font-size: 16px; margin-top: 12px; padding: 6px 16px; text-align: center; }
     /* v1.5.1: single-column prayer rows (mockup) — icon at the
@@ -522,7 +557,7 @@
     .card {
       flex: 1 1 0; min-height: 0; width: 100%; max-width: none;
       display: flex; flex-direction: row; align-items: center;
-      text-align: start; padding: 6px 14px; border-radius: 16px;
+      text-align: start; padding: 6px 14px; border-radius: 18px;
       overflow: hidden;
     }
     .card .icon { height: auto; flex: none; display: flex; align-items: center; }
@@ -531,7 +566,8 @@
     .card .name { font-size: 16px; margin-top: 0; }
     .card .status { font-size: 12px; margin-top: 2px; }
     .card .time { font-size: 22px; margin-top: 0; margin-inline-start: 10px; flex: none; }
-    .card .nowtag { position: static; -webkit-transform: none; transform: none; display: inline-block; font-size: 11px; padding: 1px 10px 2px; }
+    .card .nowtag { position: static; -webkit-transform: none; transform: none; display: inline-block; font-size: 11px; padding: 1px 10px 2px; margin-inline-end: 7px; }
+    .card .nexttag { font-size: 11px; padding: 1px 10px 2px; margin-inline-end: 7px; }
     button { font-size: 16px; padding: 10px 16px; border-radius: 10px; }
     #soundmsg { font-size: 15px; margin-top: 14px; text-align: center; }
     #playing { font-size: 17px; margin-top: 14px; text-align: center; }
@@ -580,9 +616,10 @@
   /* Short phones (<=700px tall): compact the home column so the whole
      home screen fits inside 100dvh without scrolling. */
   @media (max-width: 760px) and (max-height: 700px) {
-    #clock { font-size: min(46px, 11.5vw); margin-top: 6px; }
-    #dateline { margin-top: 6px; }
-    #hijri { margin-top: 6px; }
+    #clock { font-size: min(52px, 13vw); margin-top: 6px; }
+    #datepill { margin-top: 6px; }
+    #nextline { margin-top: 6px; }
+    #timeshead { margin-top: 8px; font-size: 17px; }
     #greeting { margin-top: 8px; }
     #times { margin-top: 8px; gap: 6px; }
     .card { padding: 3px 12px; }
@@ -610,11 +647,12 @@
     <div id="place">Montr&eacute;al &middot; Canada &middot; ISNA &middot; Asr: <span id="asrlabel">Hanafi</span></div>
 
     <div id="clock">--:--</div>
-    <div id="dateline"></div>
-    <div id="hijri"></div>
+    <div id="datepill"><span id="dateline"></span><span class="pillsep">&bull;</span><span id="hijri"></span></div>
+    <div id="nextline"></div>
     <div id="nowplaying"></div>
     <div id="greeting"></div>
 
+    <div id="timeshead"></div>
     <div id="times"></div>
 
     <button id="btnPlay" tabindex="1">&#9654; Play Athan</button>
@@ -888,6 +926,11 @@
     expected_word: { en: 'expected', fr: 'date estimée', ar: 'متوقعة' },
     next_word: { en: 'Next', fr: 'Prochaine prière', ar: 'الصلاة التالية' },
     now_tag: { en: 'Now', fr: 'En cours', ar: 'الآن' },
+    next_tag: { en: 'Next', fr: 'Suivant', ar: 'التالي' },
+    completed: { en: 'Completed', fr: 'Terminé', ar: 'اكتملت' },
+    endsIn: { en: 'Ends in', fr: 'Se termine dans', ar: 'ينتهي في' },
+    startsIn: { en: 'Starts in', fr: 'Commence dans', ar: 'يبدأ في' },
+    prayer_times: { en: 'Prayer Times', fr: 'Heures de prière', ar: 'أوقات الصلاة' },
     at_word: { en: 'at', fr: 'à', ar: 'في' },
     in_word: { en: 'in', fr: 'dans', ar: 'بعد' },
     tomorrow_word: { en: 'tomorrow', fr: 'demain', ar: 'غدًا' },
@@ -971,6 +1014,7 @@
     el('dMosqueTx').textContent = t('my_mosque');
     el('dSettingsTx').textContent = t('settings_btn');
     el('headSettings').textContent = t('settings_btn');
+    el('timeshead').textContent = t('prayer_times');
     btnLang.textContent = t('language_label') + t('language_name');
     btnAsr.textContent = t('asr_word') + ': ' + t('hanafi') + ' / ' + t('shafii');
     adhanLabel();
@@ -1338,8 +1382,8 @@
   function render(now) {
     refreshTimes(now);
     el('clock').textContent = fmtClock(now);
-    // The dateline is built below, once the next prayer is known: it is
-    // the merged TV v1.6.0 line (short date • city • next + countdown).
+    // The date pill and the white next line are built below, once the
+    // next prayer is known (v1.5.2 split of the old merged dateline).
     var hjNow = jdToIslamic(gregToJd(now.getFullYear(), now.getMonth() + 1, now.getDate()));
     el('hijri').textContent = hjNow.day + ' ' + HIJRI_MONTHS[hjNow.month - 1] + ' ' + hjNow.year + ' ' + t('ah_suffix');
     var occToday = occasionOn(hjNow.month, hjNow.day);
@@ -1373,8 +1417,8 @@
           (goldIdx < 0 || todayTimes[ai] > todayTimes[goldIdx])) goldIdx = ai;
     }
 
-    // Merged dateline (TV v1.6.0): short date, selected city, next
-    // prayer and its countdown on one line, all localized.
+    // Next-prayer computation (unchanged values): they fill the
+    // pill's white line and the bottom bar below.
     var nextName, nextDiff, nextAtMin;
     if (nextIdx >= 0) {
       nextName = NAMES[nextIdx];
@@ -1388,10 +1432,14 @@
       nextDiff = (1440 + tTimes[0]) * 60000 - nowMs;
       nextAtMin = 1440 + tTimes[0];
     }
+    // Date pill (v1.5.2): the Gregorian short date only — #hijri was
+    // set above and shares the same gold pill in the markup.
     el('dateline').textContent =
-      now.toLocaleDateString(LOCALE(), { weekday: 'short', month: 'short', day: 'numeric' }) +
-      ' \u2022 ' + loc.city + ' \u2022 ' +
-      nextName + ' ' + t('in_word') + ' ' + fmtShortCountdown(nextDiff);
+      now.toLocaleDateString(LOCALE(), { weekday: 'short', month: 'short', day: 'numeric' });
+    // White line under the pill (v1.5.2): city, next prayer and its
+    // countdown — the same computed values the old dateline carried.
+    el('nextline').textContent =
+      loc.city + ' \u2022 ' + nextName + ' ' + t('in_word') + ' ' + fmtShortCountdown(nextDiff);
     // Bottom next-prayer bar (v1.5.0): the same "next" fact as the
     // dateline, in the mockup's bar form ("Next: Maghrib at 4:25 PM").
     el('nextbar').textContent = t('next_word') + ': ' + nextName + ' ' + t('at_word') + ' ' + fmtMin(nextAtMin);
@@ -1403,12 +1451,22 @@
       var cls = 'card';
       if (idx === goldIdx) cls += ' now-card';
       else if (idx === nextIdx) cls += ' next-prayer';
-      // v1.5.1 row layout: icon, then name + a status line (the Now
-      // pill on the gold card; the already-computed countdown on the
-      // next card — the same fragment the dateline shows), then time.
+      // v1.5.2 statuses, in the drawing's form: past prayers read
+      // "Completed"; the gold card pairs its Now pill with
+      // "Ends in <countdown>"; the next card pairs a Next pill with
+      // "Starts in <countdown>"; later prayers keep an empty status.
+      // Every countdown reuses the already-computed nextDiff (short
+      // form, so pill + text always fit the row — the v1.5.1 fit rule).
       var statusHtml = '';
-      if (idx === goldIdx) statusHtml = '<span class="nowtag">' + t('now_tag') + '</span>';
-      else if (idx === nextIdx) statusHtml = t('in_word') + ' ' + fmtShortCountdown(nextDiff);
+      if (idx === goldIdx) {
+        statusHtml = '<span class="nowtag">' + t('now_tag') + '</span>' +
+          t('endsIn') + ' ' + fmtShortCountdown(nextDiff);
+      } else if (idx === nextIdx) {
+        statusHtml = '<span class="nexttag">' + t('next_tag') + '</span>' +
+          t('startsIn') + ' ' + fmtShortCountdown(nextDiff);
+      } else if (todayTimes[idx] <= nowMin) {
+        statusHtml = t('completed');
+      }
       html += '<div class="' + cls + '">' +
               '<div class="icon">' + CARD_ICONS[idx] + '</div>' +
               '<div class="cardmain"><div class="name">' + NAMES[idx] +
