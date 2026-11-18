@@ -340,6 +340,30 @@
   }
   .nbfollow.on { background: #e8c877; color: #0b1e3a; }
 
+  /* Settings switches (v1.4.1): "Athan sound" + "Prayer notifications"
+     in the menubar, next to the Adhan / Asr controls. Large touch
+     targets; the helper line appears only while a switch is off. */
+  .setitem { display: inline-flex; flex-direction: column; align-items: center; }
+  #menubar button.setsw { display: inline-flex; align-items: center; gap: 12px; }
+  .sw-track {
+    flex: none; width: 56px; height: 32px; border-radius: 999px;
+    background: rgba(245, 241, 230, 0.25); border: 2px solid rgba(232, 200, 119, 0.6);
+    position: relative;
+  }
+  .sw-knob {
+    position: absolute; top: 3px; left: 3px; width: 24px; height: 24px;
+    border-radius: 50%; background: #f5f1e6;
+  }
+  .setsw[aria-checked="true"] .sw-track { background: #8a6410; border-color: #e8c877; }
+  .setsw[aria-checked="true"] .sw-knob { left: 27px; background: #ffd968; }
+  [dir="rtl"] .sw-knob { left: auto; right: 3px; }
+  [dir="rtl"] .setsw[aria-checked="true"] .sw-knob { right: 27px; }
+  .sethelp {
+    display: none; font-size: 17px; color: #ffdf8e; margin-top: 4px;
+    text-align: center; text-shadow: 0 1px 5px rgba(0,0,0,0.45);
+  }
+  .sethelp.on { display: block; }
+
   /* ---- Phone pass (Android): touch scrolling + small portrait screens ---- */
   [dir="rtl"] .ayah .en { direction: ltr; text-align: left; }
   .lrow, .lhead { cursor: pointer; }
@@ -404,6 +428,13 @@
     .mqann-body { font-size: 15px; }
     input.mqtime { font-size: 16px; padding: 4px 6px; }
     .nbfollow { font-size: 15px; padding: 5px 14px; }
+    #menubar button.setsw { gap: 7px; }
+    .sw-track { width: 40px; height: 24px; }
+    .sw-knob { width: 18px; height: 18px; top: 2px; left: 2px; }
+    .setsw[aria-checked="true"] .sw-knob { left: 19px; }
+    [dir="rtl"] .sw-knob { right: 2px; }
+    [dir="rtl"] .setsw[aria-checked="true"] .sw-knob { right: 19px; }
+    .sethelp { font-size: 11px; }
   }
 </style>
 </head>
@@ -434,7 +465,9 @@
       <button id="btnMosque" tabindex="10">My Mosque</button><span class="sep">&bull;</span>
       <button id="btnLang" tabindex="7">Language: English</button><span class="sep">&bull;</span>
       <button id="btnAdhan" tabindex="4">Adhan: Classic</button><span class="sep">&bull;</span>
-      <button id="btnAsr" tabindex="5">Asr: Hanafi / Shafi'i</button>
+      <button id="btnAsr" tabindex="5">Asr: Hanafi / Shafi'i</button><span class="sep">&bull;</span>
+      <span class="setitem"><button id="btnSetAthan" class="setsw" role="switch" aria-checked="true" tabindex="11"><span class="sw-track"><span class="sw-knob"></span></span><span id="swAthanLabel">Athan sound</span></button><span class="sethelp" id="helpAthan"></span></span><span class="sep">&bull;</span>
+      <span class="setitem"><button id="btnSetNotif" class="setsw" role="switch" aria-checked="true" tabindex="12"><span class="sw-track"><span class="sw-knob"></span></span><span id="swNotifLabel">Prayer notifications</span></button><span class="sethelp" id="helpNotif"></span></span>
     </div>
 
     <div id="soundmsg">Tap anywhere to enable athan sound</div>
@@ -619,6 +652,10 @@
     change_mosque: { en: 'Change mosque', fr: 'Changer de mosquée', ar: 'تغيير المسجد' },
     follow: { en: 'Follow', fr: 'Suivre', ar: 'متابعة' },
     followed: { en: '\u2605 Followed', fr: '\u2605 Suivie', ar: '\u2605 تتم متابعته' },
+    athan_sound: { en: 'Athan sound', fr: 'Son de l\u2019adhan', ar: 'صوت الأذان' },
+    athan_sound_help: { en: 'Off: prayers stay silent \u2014 no athan or reminder voice', fr: 'D\u00e9sactiv\u00e9 : les pri\u00e8res restent silencieuses \u2014 ni adhan ni voix de rappel', ar: 'إيقاف: تبقى الصلوات صامتة — لا أذان ولا صوت تذكير' },
+    prayer_notifications: { en: 'Prayer notifications', fr: 'Notifications de pri\u00e8re', ar: 'إشعارات الصلاة' },
+    prayer_notifications_help: { en: 'Off: no prayer alerts at all', fr: 'D\u00e9sactiv\u00e9 : aucune alerte de pri\u00e8re', ar: 'إيقاف: لا تنبيهات صلاة على الإطلاق' },
     language_label: { en: 'Language: ', fr: 'Langue : ', ar: 'اللغة: ' },
     language_name: { en: 'English', fr: 'Français', ar: 'العربية' },
     back: { en: '\u2190 Back', fr: '\u2190 Retour', ar: 'رجوع' },
@@ -734,6 +771,7 @@
     btnLang.textContent = t('language_label') + t('language_name');
     btnAsr.textContent = t('asr_word') + ': ' + t('hanafi') + ' / ' + t('shafii');
     adhanLabel();
+    refreshSettingsUI();
     var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque'];
     for (var bi = 0; bi < bbIds.length; bi++) el(bbIds[bi]).textContent = t('back');
     el('headQList').textContent = t('head_qlist');
@@ -899,6 +937,19 @@
     var saved = window.localStorage.getItem('athan-asr');
     if (saved === '1' || saved === '2') asrFactor = parseInt(saved, 10);
   } catch (e) { /* localStorage may be unavailable; default stays */ }
+
+  // Settings switches (v1.4.1): 'Athan sound' (mute) and 'Prayer
+  // notifications' (on/off). Both default ON; persisted as '1'/'0' and
+  // mirrored into every schedule payload so the native side can mute
+  // playback / cancel alarms even while the app is closed.
+  var athanSoundOn = true;
+  try {
+    if (window.localStorage.getItem('setAthanSound') === '0') athanSoundOn = false;
+  } catch (e) { /* default stays on */ }
+  var notifOn = true;
+  try {
+    if (window.localStorage.getItem('setNotifications') === '0') notifOn = false;
+  } catch (e) { /* default stays on */ }
 
   var audio = document.getElementById('adhan');
   var salatAudio = document.getElementById('salat');
@@ -1294,6 +1345,7 @@
   function triggerPrayer() {
     stopQuranAudio(); // prayer time takes over the audio from any recitation
     showSalatMessage();
+    if (!athanSoundOn) return; // Athan sound off (v1.4.1): message only, no audio
     if (!soundUnlocked) {
       // Keep the original behaviour: attempt the athan (it will be blocked
       // until the first remote press, which also unlocks the sound).
@@ -1393,7 +1445,9 @@
   var btnAdhan = el('btnAdhan');
   var btnAsr = el('btnAsr');
   var btnLang = el('btnLang');
-  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnLocation, btnNearby, btnMosque, btnAdhan, btnAsr, btnLang];
+  var btnSetAthan = el('btnSetAthan');
+  var btnSetNotif = el('btnSetNotif');
+  var BTNS = [btnPlay, btnQuran, btnDuas, btnHolidays, btnLocation, btnNearby, btnMosque, btnAdhan, btnAsr, btnLang, btnSetAthan, btnSetNotif];
 
   function showScreen(name) {
     screen = name;
@@ -1914,7 +1968,8 @@
   // timezone, exactly the displayed times), the localized prayer
   // names and the localized salat message for the notification.
   // Emitted on every app load, on every prayer-relevant settings
-  // change (city, Asr factor, athan sound, language) and at each day
+  // change (city, Asr factor, athan sound, language, the v1.4.1
+  // settings switches) and at each day
   // rollover. Every call is guarded: without the bridge (webOS/TV,
   // desktop browser) this is a no-op and the app behaves as before.
   var SCHED_KEYS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
@@ -1946,7 +2001,8 @@
         generatedAt: now.getTime(),
         settings: {
           lat: loc.lat, lng: loc.lng, method: loc.method,
-          asrFactor: asrFactor, adhanId: adhanIdx, lang: lang
+          asrFactor: asrFactor, adhanId: adhanIdx, lang: lang,
+          athanMuted: !athanSoundOn, notificationsOff: !notifOn
         },
         days: [schedDay(now), schedDay(new Date(now.getTime() + 86400000))]
       };
@@ -1958,6 +2014,22 @@
 
   function adhanLabel() { btnAdhan.textContent = t('adhan_prefix') + adhanName(); }
   adhanLabel();
+
+  // Settings switches (v1.4.1): reflect the persisted state in the two
+  // menubar switches — position (aria-checked drives the knob), the
+  // localized labels, and the helper line shown while a switch is off.
+  function refreshSettingsUI() {
+    btnSetAthan.setAttribute('aria-checked', athanSoundOn ? 'true' : 'false');
+    btnSetNotif.setAttribute('aria-checked', notifOn ? 'true' : 'false');
+    el('swAthanLabel').textContent = t('athan_sound');
+    el('swNotifLabel').textContent = t('prayer_notifications');
+    var hA = el('helpAthan'), hN = el('helpNotif');
+    hA.textContent = t('athan_sound_help');
+    hN.textContent = t('prayer_notifications_help');
+    hA.className = 'sethelp' + (athanSoundOn ? '' : ' on');
+    hN.className = 'sethelp' + (notifOn ? '' : ' on');
+  }
+  refreshSettingsUI();
 
   el('btnListen').addEventListener('click', function () { toggleQuranAudio(); });
   el('btnReciter').addEventListener('click', function () { cycleReciter(); });
@@ -2033,6 +2105,22 @@
     pingService(); // the background service schedules with this factor too
     emitSchedule();
     render(new Date());
+  });
+  // 'Athan sound' switch: off = prayers stay silent (the salat message
+  // still shows; the native side posts its notification without audio).
+  btnSetAthan.addEventListener('click', function () {
+    athanSoundOn = !athanSoundOn;
+    try { window.localStorage.setItem('setAthanSound', athanSoundOn ? '1' : '0'); } catch (e) { /* ignore */ }
+    refreshSettingsUI();
+    emitSchedule(); // the payload now carries athanMuted for the native side
+  });
+  // 'Prayer notifications' switch: off = no prayer alerts at all (the
+  // native side cancels every armed alarm until this is back on).
+  btnSetNotif.addEventListener('click', function () {
+    notifOn = !notifOn;
+    try { window.localStorage.setItem('setNotifications', notifOn ? '1' : '0'); } catch (e) { /* ignore */ }
+    refreshSettingsUI();
+    emitSchedule(); // the payload now carries notificationsOff for the native side
   });
 
   /* ---------- Nearby: mosques + halal food around you ---------- */
@@ -2794,6 +2882,7 @@
     salatDismissed = '';
     stopQuranAudio(); // prayer time takes over the audio from any recitation
     showSalatMessage();
+    if (!athanSoundOn) return; // Athan sound off (v1.4.1): message only, no audio
     if (soundUnlocked) {
       startReminderThenAthan(function () { playAthan(); });
     } else {
