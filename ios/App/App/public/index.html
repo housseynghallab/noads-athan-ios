@@ -72,13 +72,22 @@
     font-size: 21px; color: #d7e1f2; margin-top: 10px;
     text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.7);
   }
-  /* Elegant glowing clock (v1.5.2, per the design drawing): light
-     weight with a soft layered gold glow, no backing
-     pill — it sits directly on the photo. */
+  /* Hero label (v1.5.4): the next prayer's name above the hero —
+     "Fajr in" / "Fajr dans" / "الفجر بعد" — small, white, shadowed
+     like the other header lines. */
+  #herolabel {
+    font-size: 30px; font-weight: 600; color: #ffffff;
+    letter-spacing: 0.5px; margin-top: 16px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.65);
+  }
+  /* Elegant glowing hero (v1.5.2 look; v1.5.4 content): light weight
+     with a soft layered gold glow, no backing pill — it sits directly
+     on the photo. Since v1.5.4 it shows the countdown to the next
+     prayer ("8 h 40 min"), not the current time. */
   #clock {
     font-size: 172px; font-weight: 300; letter-spacing: 0.5px;
     line-height: 1.05;
-    margin-top: 18px; font-variant-numeric: tabular-nums;
+    margin-top: 4px; font-variant-numeric: tabular-nums;
     color: #f3d98b; white-space: nowrap;
     text-shadow: 0 0 18px rgba(243,217,139,0.55),
                  0 0 48px rgba(240,200,100,0.35),
@@ -87,8 +96,8 @@
   }
   /* Date pill (v1.5.2, per the design drawing): ONE gold translucent
      pill holding the Gregorian date (#dateline) and the Hijri date
-     (#hijri) together. Below it, #nextline carries the city + next
-     prayer countdown on one white line. */
+     (#hijri) together. Below it, #nextline carries the city alone
+     (v1.5.4: the countdown lives in the hero, not here). */
   #datepill {
     display: inline-flex; align-items: center; gap: 12px;
     align-self: center; max-width: 100%;
@@ -324,7 +333,7 @@
   }
   .mflow {
     font-family: 'Amiri Quran', 'Traditional Arabic', serif;
-    font-size: 40px; line-height: 2.15; text-align: justify;
+    font-size: 36px; line-height: 2.15; text-align: justify;
     color: #241a10;
   }
   .amedal {
@@ -588,11 +597,12 @@
        full width, wrapping (never clipping) as a last resort.
        Elegant per the design drawing: light weight, letter-spaced,
        pale gold #f3d98b with the soft layered glow of the base rule. */
+    #herolabel { font-size: 16px; margin-top: 12px; width: 100%; text-align: center; }
     #clock {
-      font-size: min(74px, 13vw);
+      font-size: min(70px, 12.2vw);
       font-weight: 300; letter-spacing: 0.5px;
       white-space: normal; width: 100%; text-align: center;
-      color: #f3d98b; line-height: 1.05; margin-top: 10px;
+      color: #f3d98b; line-height: 1.05; margin-top: 2px;
     }
     #datepill { font-size: 14px; margin-top: 8px; padding: 5px 18px; gap: 8px; }
     #datepill #dateline, #datepill #hijri { white-space: normal; }
@@ -607,17 +617,20 @@
     #greeting { font-size: 16px; margin-top: 12px; padding: 6px 16px; text-align: center; }
     /* v1.5.1: single-column prayer rows (mockup) — icon at the
        leading edge, name + status stacked, big time at the trailing
-       edge. Rows flex-shrink so home fits 100dvh without scrolling. */
-    #times { flex-direction: column; flex-wrap: nowrap; gap: 8px; margin-top: 12px; flex: 1 1 auto; min-height: 0; width: 100%; justify-content: center; }
+       edge. v1.5.4: rows never squash — min-height 56px and no
+       flex-shrink; #times keeps its min-content height, so on short
+       screens the home scrolls vertically instead of clipping text
+       inside a row. */
+    #times { flex-direction: column; flex-wrap: nowrap; gap: 8px; margin-top: 12px; flex: 1 1 auto; min-height: min-content; width: 100%; justify-content: center; }
     .card {
-      flex: 1 1 0; min-height: 0; width: 100%; max-width: none;
+      flex: 1 0 0; min-height: 56px; width: 100%; max-width: none;
       display: flex; flex-direction: row; align-items: center;
       text-align: start; padding: 6px 14px; border-radius: 18px;
       overflow: hidden;
     }
     .card .icon { height: auto; flex: none; display: flex; align-items: center; }
     .card .icon svg { width: 26px; height: 26px; }
-    .cardmain { flex: 1 1 auto; margin-inline-start: 12px; }
+    .cardmain { flex: 1 1 auto; flex-shrink: 0; margin-inline-start: 12px; }
     .card .name { font-size: 16px; margin-top: 0; }
     .card .status { font-size: 12px; margin-top: 2px; }
     .card .time { font-size: 22px; margin-top: 0; margin-inline-start: 10px; flex: none; }
@@ -645,9 +658,9 @@
     .surah-banner { font-size: 26px; margin-bottom: 18px; padding: 6px 10px 9px; }
     .surah-banner .orn { width: 8px; height: 8px; margin: 0 10px; }
     .basmalah { font-size: 26px; margin-bottom: 14px; }
-    .mflow { font-size: 27px; line-height: 2.2; }
+    .mflow { font-size: 24px; line-height: 2.2; }
     .mblock { margin-bottom: 20px; }
-    .mtrans { font-size: 15px; margin-top: 7px; }
+    .mtrans { font-size: 14px; margin-top: 7px; }
     #qplay-status { font-size: 15px; }
     #btnListen { margin-inline-start: 8px; }
     #btnReciter { margin-inline-start: 8px; }
@@ -679,7 +692,8 @@
   /* Short phones (<=700px tall): compact the home column so the whole
      home screen fits inside 100dvh without scrolling. */
   @media (max-width: 760px) and (max-height: 700px) {
-    #clock { font-size: min(52px, 13vw); margin-top: 6px; }
+    #clock { font-size: min(52px, 12.2vw); margin-top: 2px; }
+    #herolabel { margin-top: 6px; }
     #datepill { margin-top: 6px; }
     #nextline { margin-top: 6px; }
     #timeshead { margin-top: 8px; font-size: 17px; }
@@ -709,7 +723,8 @@
     </div>
     <div id="place">Montr&eacute;al &middot; Canada &middot; ISNA &middot; Asr: <span id="asrlabel">Hanafi</span></div>
 
-    <div id="clock">--:--</div>
+    <div id="herolabel"></div>
+    <div id="clock">--</div>
     <div id="datepill"><span id="dateline"></span><span class="pillsep">&bull;</span><span id="hijri"></span></div>
     <div id="nextline"></div>
     <div id="nowplaying"></div>
@@ -1301,11 +1316,17 @@
       asrName() + '</span>';
   }
 
-  function fmtClock(d) {
-    var h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
-    var suffix = h < 12 ? t('am') : t('pm');
-    var h12 = h % 12; if (h12 === 0) h12 = 12;
-    return h12 + ':' + pad(m) + ':' + pad(s) + ' ' + suffix;
+  // Hero countdown (v1.5.4): the home hero no longer shows the
+  // current time — it shows the time left until the next prayer,
+  // hours + minutes only: "8 h 40 min", "40 min", "0 min". The same
+  // unit tokens serve every UI language; the label above the hero
+  // carries the localized prayer name + "in/dans/بعد".
+  function fmtHeroCountdown(ms) {
+    var totalMin = Math.max(0, Math.floor(ms / 60000));
+    var h = Math.floor(totalMin / 60);
+    var m = totalMin % 60;
+    if (h > 0) return h + ' h ' + pad(m) + ' min';
+    return m + ' min';
   }
 
   function fmtCountdown(ms) {
@@ -1445,11 +1466,12 @@
     return null;
   }
 
+  var lastHeroText = '';
+
   function render(now) {
     refreshTimes(now);
-    el('clock').textContent = fmtClock(now);
-    // The date pill and the white next line are built below, once the
-    // next prayer is known (v1.5.2 split of the old merged dateline).
+    // The hero (label + countdown), the date pill and the white line
+    // are built below, once the next prayer is known.
     var hjNow = jdToIslamic(gregToJd(now.getFullYear(), now.getMonth() + 1, now.getDate()));
     el('hijri').textContent = hjNow.day + ' ' + HIJRI_MONTHS[hjNow.month - 1] + ' ' + hjNow.year + ' ' + t('ah_suffix');
     var occToday = occasionOn(hjNow.month, hjNow.day);
@@ -1484,7 +1506,7 @@
     }
 
     // Next-prayer computation (unchanged values): they fill the
-    // pill's white line and the bottom bar below.
+    // hero label + countdown and the bottom bar below.
     var nextName, nextDiff, nextAtMin;
     if (nextIdx >= 0) {
       nextName = NAMES[nextIdx];
@@ -1502,12 +1524,21 @@
     // set above and shares the same gold pill in the markup.
     el('dateline').textContent =
       now.toLocaleDateString(LOCALE(), { weekday: 'short', month: 'short', day: 'numeric' });
-    // White line under the pill (v1.5.2): city, next prayer and its
-    // countdown — the same computed values the old dateline carried.
-    el('nextline').textContent =
-      loc.city + ' \u2022 ' + nextName + ' ' + t('in_word') + ' ' + fmtShortCountdown(nextDiff);
+    // Hero (v1.5.4): the label names the next prayer ("Fajr in" /
+    // "Fajr dans" / "الفجر بعد") and the big element counts down to
+    // it in hours + minutes. The big text is only rewritten when the
+    // displayed minute changes.
+    el('herolabel').textContent = nextName + ' ' + t('in_word');
+    var heroText = fmtHeroCountdown(nextDiff);
+    if (heroText !== lastHeroText) {
+      lastHeroText = heroText;
+      el('clock').textContent = heroText;
+    }
+    // White line under the pill: the city alone (v1.5.4 — the
+    // countdown moved to the hero; it is not shown twice).
+    el('nextline').textContent = loc.city;
     // Bottom next-prayer bar (v1.5.0): the same "next" fact as the
-    // dateline, in the mockup's bar form ("Next: Maghrib at 4:25 PM").
+    // hero, in the mockup's bar form ("Next: Maghrib at 4:25 PM").
     el('nextbar').textContent = t('next_word') + ': ' + nextName + ' ' + t('at_word') + ' ' + fmtMin(nextAtMin);
 
     // build cards
