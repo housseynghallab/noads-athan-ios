@@ -288,6 +288,61 @@
   }
   .ayah .en { font-size: 24px; line-height: 1.5; color: #b9c8e2; margin-top: 6px; }
   .ayah .num { color: #e8c877; font-size: 24px; }
+  /* v1.5.3: Mushaf Quran reader — a cream printed-page look. The
+     Arabic (Tanzil Uthmani) flows continuously like a real mushaf,
+     each ayah closed by a gold medallion carrying its number in
+     Arabic-Indic digits. Amiri Quran is bundled (amiri-quran.woff2,
+     covers every codepoint of the bundled Uthmani text). */
+  @font-face {
+    font-family: 'Amiri Quran';
+    src: url('amiri-quran.woff2') format('woff2');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  #btnTrans { margin-inline-start: 16px; }
+  .mushaf {
+    background: #f9f2df; color: #2b2118;
+    border: 2px solid #a8842c; border-radius: 6px;
+    box-shadow: inset 0 0 0 7px #f9f2df, inset 0 0 0 9px rgba(168, 132, 44, 0.55);
+    padding: 40px 48px 34px;
+  }
+  .surah-banner {
+    background: linear-gradient(180deg, #14305c, #0b1e3a);
+    border: 2px solid #c9a227; border-radius: 8px;
+    color: #f3d98b; text-align: center;
+    font-family: 'Amiri Quran', 'Traditional Arabic', serif;
+    font-size: 38px; line-height: 1.6; padding: 8px 16px 12px;
+    margin-bottom: 26px;
+  }
+  .surah-banner .orn {
+    display: inline-block; width: 11px; height: 11px; margin: 0 18px;
+    background: #c9a227; transform: rotate(45deg); vertical-align: middle;
+  }
+  .basmalah {
+    font-family: 'Amiri Quran', 'Traditional Arabic', serif;
+    font-size: 36px; line-height: 1.9; text-align: center;
+    color: #2b2118; margin-bottom: 20px;
+  }
+  .mflow {
+    font-family: 'Amiri Quran', 'Traditional Arabic', serif;
+    font-size: 40px; line-height: 2.15; text-align: justify;
+    color: #241a10;
+  }
+  .amedal {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.5em; height: 1.5em; margin: 0 0.14em;
+    border: 2px solid #b8912f; border-radius: 50%;
+    background: radial-gradient(circle at 50% 42%, #fffbe9 0%, #f3e3ae 78%);
+    vertical-align: middle;
+  }
+  .amedal-n {
+    font-size: 0.42em; line-height: 1; color: #7a5c14;
+    font-family: 'Amiri Quran', 'Traditional Arabic', serif;
+  }
+  .mblock { margin-bottom: 30px; }
+  .mtrans {
+    font-size: 24px; line-height: 1.55; color: #6f6046;
+    margin-top: 10px; text-align: left;
+  }
   /* Salat reminder overlay */
   #salat-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -585,6 +640,14 @@
     .ayah .ar { font-size: 27px; line-height: 1.9; }
     .ayah .en { font-size: 16px; }
     .ayah .num { font-size: 15px; }
+    #btnTrans { margin-inline-start: 8px; }
+    .mushaf { padding: 24px 18px 20px; }
+    .surah-banner { font-size: 26px; margin-bottom: 18px; padding: 6px 10px 9px; }
+    .surah-banner .orn { width: 8px; height: 8px; margin: 0 10px; }
+    .basmalah { font-size: 26px; margin-bottom: 14px; }
+    .mflow { font-size: 27px; line-height: 2.2; }
+    .mblock { margin-bottom: 20px; }
+    .mtrans { font-size: 15px; margin-top: 7px; }
     #qplay-status { font-size: 15px; }
     #btnListen { margin-inline-start: 8px; }
     #btnReciter { margin-inline-start: 8px; }
@@ -686,6 +749,7 @@
       <button id="btnBackQRead" tabindex="10">&#8592; Back</button>
       <button id="btnListen" tabindex="6">&#9654; Listen &mdash; Mishary Alafasy</button>
       <button id="btnReciter" tabindex="7">Reciter: Mishary Alafasy</button>
+      <button id="btnTrans" tabindex="8">Translation: Off</button>
       <div id="qplay-status"></div>
     </div>
     <div id="qread" class="readbox"></div>
@@ -915,6 +979,8 @@
     listen: { en: 'Listen', fr: 'Écouter', ar: 'استماع' },
     pause: { en: 'Pause', fr: 'Pause', ar: 'إيقاف مؤقت' },
     reciter: { en: 'Reciter', fr: 'Récitant', ar: 'القارئ' },
+    translation: { en: 'Translation', fr: 'Traduction', ar: 'الترجمة' },
+    trans_off: { en: 'Off', fr: 'D\u00e9sactiv\u00e9e', ar: 'إيقاف' },
     now_playing: { en: 'Now playing', fr: 'Lecture en cours', ar: 'يُشغَّل الآن' },
     paused: { en: 'Paused', fr: 'En pause', ar: 'موقوف مؤقتًا' },
     loading: { en: 'Loading\u2026', fr: 'Chargement\u2026', ar: 'جارٍ التحميل…' },
@@ -1838,18 +1904,129 @@
     qHighlight();
   }
 
-  function openSurah(i) {
-    qCur = i;
-    var s = QURAN[i], html = '', j;
-    el('qread-title').textContent = s.n + '. ' + s.en_name + ' — ' + s.ar_name;
-    for (j = 0; j < s.ayahs.length; j++) {
-      html += '<div class="ayah"><div class="ar" dir="rtl">' + esc(s.ayahs[j].a) +
-              ' <span class="num">(' + (j + 1) + ')</span></div>' +
-              '<div class="en">' + (j + 1) + '. ' + esc(s.ayahs[j].e) + '</div></div>';
+  /* ---------- Mushaf reader (v1.5.3) ---------- */
+
+  // The Basmalah exactly as it stands in the bundled Tanzil text: it
+  // is Al-Fatiha's first ayah, and it prefixes ayah 1 of every surah
+  // except At-Tawba (9). Surahs 95 and 97 carry a variant with a
+  // shadda on the first letter; both forms are recognised when the
+  // Basmalah is lifted out of the flow onto its own line, the way a
+  // printed mushaf shows it.
+  function basmalahText() { return QURAN[0].ayahs[0].a; }
+  function basmalahVariant() {
+    var b = basmalahText();
+    return b.charAt(0) + '\u0651' + b.slice(1);
+  }
+  function stripBasmalah(text) {
+    var b = basmalahText(), v = basmalahVariant();
+    if (text.indexOf(b + ' ') === 0) return text.slice(b.length + 1);
+    if (text.indexOf(v + ' ') === 0) return text.slice(v.length + 1);
+    return text;
+  }
+
+  var AR_DIGITS = '\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669';
+  function arabDigits(n) {
+    return String(n).replace(/[0-9]/g, function (d) { return AR_DIGITS[+d]; });
+  }
+  function medallion(n) {
+    return '<span class="amedal"><span class="amedal-n">' + arabDigits(n) + '</span></span>';
+  }
+
+  // Reader translation: 'off' (Arabic only — the default) | 'en' |
+  // 'fr' | 'tl'. English ships inside quran-data.js; the French
+  // (Hamidullah) and Tagalog (Dar Al-Salam) editions live in their
+  // own data files, fetched on demand and then available offline.
+  var TRANS_MODES = ['off', 'en', 'fr', 'tl'];
+  var TRANS_NAMES = { en: 'English', fr: 'Fran\u00e7ais', tl: 'Tagalog' };
+  var TRANS_FILES = { fr: 'quran-data-fr.js', tl: 'quran-data-tl.js' };
+  var qTrans = 'off';
+  try {
+    var savedTrans = window.localStorage.getItem('quranTranslation');
+    if (TRANS_MODES.indexOf(savedTrans) >= 0) qTrans = savedTrans;
+  } catch (e) { /* default stays Arabic only */ }
+  var transLoading = {}; // mode -> true while its data file is in flight
+
+  function transReady(mode) {
+    if (mode === 'off' || mode === 'en') return true;
+    if (mode === 'fr') return typeof QURAN_FR !== 'undefined';
+    if (mode === 'tl') return typeof QURAN_TL !== 'undefined';
+    return true;
+  }
+
+  function transText(mode, si, j) {
+    if (mode === 'en') return QURAN[si].ayahs[j].e;
+    if (mode === 'fr') return (typeof QURAN_FR !== 'undefined' && QURAN_FR[si]) ? QURAN_FR[si][j] : '';
+    if (mode === 'tl') return (typeof QURAN_TL !== 'undefined' && QURAN_TL[si]) ? QURAN_TL[si][j] : '';
+    return '';
+  }
+
+  function updateTransBtn() {
+    var b = el('btnTrans');
+    if (!b) return;
+    b.textContent = t('translation') + ': ' +
+      (qTrans === 'off' ? t('trans_off') : TRANS_NAMES[qTrans]);
+  }
+
+  function cycleTranslation() {
+    var i = TRANS_MODES.indexOf(qTrans);
+    qTrans = TRANS_MODES[(i + 1) % TRANS_MODES.length];
+    try { window.localStorage.setItem('quranTranslation', qTrans); } catch (e) { /* ignore */ }
+    updateTransBtn();
+    if (screen === 'qread' && qCur >= 0) renderSurah();
+  }
+
+  // Renders the open surah as a mushaf page: ornamental banner, the
+  // Basmalah on its own line (every surah but At-Tawba; Al-Fatiha's
+  // first ayah IS the Basmalah and stays in the flow), then the
+  // Arabic flowing continuously with a medallion after each ayah.
+  // With a translation selected, the page becomes per-ayah blocks:
+  // the same flowing Arabic, then the translation beneath it.
+  function renderSurah() {
+    if (qCur < 0 || typeof QURAN === 'undefined') return;
+    var s = QURAN[qCur], box = el('qread'), j, tx, html = '';
+    if (!transReady(qTrans)) {
+      if (!transLoading[qTrans]) {
+        transLoading[qTrans] = true;
+        loadScript(TRANS_FILES[qTrans], function () {
+          transLoading[qTrans] = false;
+          if (screen === 'qread') renderSurah();
+        });
+      }
+      box.innerHTML = '<div class="mushaf"><div class="mtrans">' + t('loading_quran') + '</div></div>';
+      box.scrollTop = 0;
+      return;
     }
-    var box = el('qread');
+    html += '<div class="mushaf">';
+    html += '<div class="surah-banner"><span class="orn"></span>' + esc(s.ar_name) + '<span class="orn"></span></div>';
+    if (s.n !== 9 && s.n !== 1) {
+      html += '<div class="basmalah" dir="rtl">' + esc(basmalahText()) + '</div>';
+    }
+    if (qTrans === 'off') {
+      html += '<div class="mflow" dir="rtl">';
+      for (j = 0; j < s.ayahs.length; j++) {
+        tx = s.ayahs[j].a;
+        if (j === 0 && s.n !== 1 && s.n !== 9) tx = stripBasmalah(tx);
+        html += esc(tx) + medallion(j + 1) + ' ';
+      }
+      html += '</div>';
+    } else {
+      for (j = 0; j < s.ayahs.length; j++) {
+        tx = s.ayahs[j].a;
+        if (j === 0 && s.n !== 1 && s.n !== 9) tx = stripBasmalah(tx);
+        html += '<div class="mblock"><div class="mflow" dir="rtl">' + esc(tx) + medallion(j + 1) + '</div>' +
+                '<div class="mtrans" dir="ltr">' + esc(transText(qTrans, qCur, j)) + '</div></div>';
+      }
+    }
+    html += '</div>';
     box.innerHTML = html;
     box.scrollTop = 0;
+  }
+
+  function openSurah(i) {
+    qCur = i;
+    var s = QURAN[i];
+    el('qread-title').textContent = s.n + '. ' + s.en_name + ' — ' + s.ar_name;
+    renderSurah();
     showScreen('qread');
     setListenFocus(true); // remote starts on the Listen button
     setListenUI();
@@ -1897,6 +2074,7 @@
   var qListenFocus = false; // reading view: remote focus is on Listen button
   var qReciterFocus = false; // reading view: remote focus is on Reciter button
   var qBackFocus = false; // reading view: remote focus is on the Back button
+  var qTransFocus = false; // reading view: remote focus is on the Translation button
 
   function quranAudioUrl(n) {
     var s = String(n);
@@ -1931,6 +2109,7 @@
   function setListenUI() {
     var btn = el('btnListen'), st = el('qplay-status'), rb = el('btnReciter');
     if (!btn || !st) return;
+    updateTransBtn();
     if (rb) rb.textContent = t('reciter') + ': ' + reciterName();
     if (qPlayState === 'playing' || qPlayState === 'loading') {
       btn.innerHTML = '&#10074;&#10074; ' + t('pause');
@@ -1958,13 +2137,15 @@
     qBackFocus = (which === 'back');
     qListenFocus = (which === 'listen');
     qReciterFocus = (which === 'reciter');
-    var bb = el('btnBackQRead'), lb = el('btnListen'), rb = el('btnReciter');
+    qTransFocus = (which === 'trans');
+    var bb = el('btnBackQRead'), lb = el('btnListen'), rb = el('btnReciter'), tb = el('btnTrans');
     try {
       if (which === 'back') bb.focus();
       else if (which === 'listen') lb.focus();
       else if (which === 'reciter') rb.focus();
+      else if (which === 'trans') tb.focus();
       else if (document.activeElement === bb || document.activeElement === lb ||
-               document.activeElement === rb) {
+               document.activeElement === rb || document.activeElement === tb) {
         document.activeElement.blur();
       }
     } catch (e) { /* ignore */ }
@@ -1972,6 +2153,7 @@
 
   function setListenFocus(on) { setQBarFocus(on ? 'listen' : 'none'); }
   function setReciterFocus(on) { setQBarFocus(on ? 'reciter' : 'none'); }
+  function setTransFocus(on) { setQBarFocus(on ? 'trans' : 'none'); }
 
   function qPlay() {
     var p = null;
@@ -2348,6 +2530,7 @@
 
   el('btnListen').addEventListener('click', function () { toggleQuranAudio(); });
   el('btnReciter').addEventListener('click', function () { cycleReciter(); });
+  el('btnTrans').addEventListener('click', function () { cycleTranslation(); });
   btnPlay.addEventListener('click', function () { playAthan(); });
   btnQuran.addEventListener('click', function () { openQuran(); });
   btnDuas.addEventListener('click', function () { openDuas(); });
@@ -3045,9 +3228,10 @@
       }
     } else if (screen === 'qread') {
       // Focus scheme: opening a surah puts the remote on the Listen button.
-      // The header bar is Back | Listen | Reciter: Right moves Back ->
-      // Listen -> Reciter, Left moves back the other way; OK goes back on
-      // Back, plays/pauses on Listen and cycles the reciter on Reciter.
+      // The header bar is Back | Listen | Reciter | Translation: Right
+      // moves Back -> Listen -> Reciter -> Translation, Left moves back
+      // the other way; OK goes back on Back, plays/pauses on Listen,
+      // cycles the reciter on Reciter and the translation on Translation.
       // Down from any bar button moves into the text and scrolls; Up at
       // the top of the text returns to the Listen button; the Back key
       // (central handler) returns to the list — playback continues.
@@ -3055,20 +3239,23 @@
         if (qBackFocus) { goBack(); ev.preventDefault(); }
         else if (qListenFocus) { toggleQuranAudio(); ev.preventDefault(); }
         else if (qReciterFocus) { cycleReciter(); ev.preventDefault(); }
+        else if (qTransFocus) { cycleTranslation(); ev.preventDefault(); }
       } else if (k === 39) {
         if (qBackFocus) { setListenFocus(true); ev.preventDefault(); }
         else if (qListenFocus) { setReciterFocus(true); ev.preventDefault(); }
-        else if (qReciterFocus) { ev.preventDefault(); }
+        else if (qReciterFocus) { setTransFocus(true); ev.preventDefault(); }
+        else if (qTransFocus) { ev.preventDefault(); }
       } else if (k === 37) {
-        if (qReciterFocus) { setListenFocus(true); ev.preventDefault(); }
+        if (qTransFocus) { setReciterFocus(true); ev.preventDefault(); }
+        else if (qReciterFocus) { setListenFocus(true); ev.preventDefault(); }
         else if (qListenFocus) { setQBarFocus('back'); ev.preventDefault(); }
         else if (qBackFocus) { ev.preventDefault(); }
       } else if (k === 40) {
-        if (qBackFocus || qListenFocus || qReciterFocus) setQBarFocus('none');
+        if (qBackFocus || qListenFocus || qReciterFocus || qTransFocus) setQBarFocus('none');
         el('qread').scrollTop += 340;
         ev.preventDefault();
       } else if (k === 38) {
-        if (qBackFocus || qListenFocus || qReciterFocus) { /* already at the top */ }
+        if (qBackFocus || qListenFocus || qReciterFocus || qTransFocus) { /* already at the top */ }
         else if (el('qread').scrollTop <= 0) setListenFocus(true);
         else el('qread').scrollTop -= 340;
         ev.preventDefault();
