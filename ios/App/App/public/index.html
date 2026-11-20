@@ -2682,14 +2682,41 @@
   // else the Web Geolocation API (Android WebView grants it through
   // MainActivity's WebChromeClient). If no position is available the
   // feature falls back to the currently selected city and says so.
-  // Results are cached per tab, keyed by a rounded position (~100 m):
-  // reopening the screen or switching tabs refetches only when the
-  // position actually moved.
+  // Results are cached per tab, keyed by a rounded position (~100 m),
+  // in memory and in localStorage for 24 h: reopening Nearby renders
+  // the saved results instantly and refreshes them in the background.
   var nbPos = null;        // {lat, lng} in use
   var nbPosIsGPS = false;  // false = selected-city fallback
   var nbTab = 'mosques';   // 'mosques' | 'halal'
   var nbCache = { mosques: null, halal: null };
   var nbCacheKey = '';
+  var nbFetchedAt = { mosques: 0, halal: 0 };  // last successful fetch, this session
+
+  // Persistent cache (v1.5.6): {cacheKey: {ts, mosques, halal}}.
+  var NB_STORE_KEY = 'nbCacheV2';
+  var NB_TTL = 24 * 60 * 60 * 1000;
+  var nbStore = null;
+  function nbStoreLoad() {
+    if (nbStore) return nbStore;
+    try { nbStore = JSON.parse(window.localStorage.getItem(NB_STORE_KEY) || '{}'); }
+    catch (e) { nbStore = null; }
+    if (!nbStore || typeof nbStore !== 'object' || Array.isArray(nbStore)) nbStore = {};
+    return nbStore;
+  }
+  function nbStoreGet(key) {
+    var e = nbStoreLoad()[key];
+    if (!e || typeof e.ts !== 'number' || (Date.now() - e.ts) > NB_TTL) return null;
+    return e;
+  }
+  function nbStorePut(key, kind, results) {
+    var s = nbStoreLoad();
+    var e = s[key] || { ts: 0, mosques: null, halal: null };
+    e[kind] = results;
+    e.ts = Date.now();
+    s[key] = e;
+    try { window.localStorage.setItem(NB_STORE_KEY, JSON.stringify(s)); }
+    catch (err) { /* quota / blocked storage: the in-memory cache still works */ }
+  }
   var nbMap = null, nbLayer = null, nbMeMarker = null;
   var nbBusy = false;
 
@@ -2703,49 +2730,78 @@
     return 2 * R * Math.asin(Math.sqrt(s));
   }
 
-  function nbQuery(kind, lat, lng) {
-    // Halal tagging is sparse, so halal searches a wider radius.
-    var radius = kind === 'halal' ? 15000 : 8000;
-    var filter = kind === 'halal'
-      ? '["amenity"~"^(restaurant|fast_food|cafe)$"]["diet:halal"="yes"]'
-      : '["amenity"="place_of_worship"]["religion"="muslim"]';
-    return '[out:json][timeout:55];(node' + filter + '(around:' + radius + ',' + lat + ',' + lng + ');' +
-           'way' + filter + '(around:' + radius + ',' + lat + ',' + lng + '););out center tags;';
+  function nbQuery(kind, lat, lng, radius) {
+    var around = '(around:' + radius + ',' + lat + ',' + lng + ');';
+    if (kind === 'halal') {
+      // Halal tagging is sparse, so halal searches a wider radius.
+      var hf = '["amenity"~"^(restaurant|fast_food|cafe)$"]["diet:halal"="yes"]';
+      return '[out:json][timeout:25];(node' + hf + around + 'way' + hf + around + ');out center tags;';
+    }
+    // Mosques are tagged two ways in OpenStreetMap: as a place of
+    // worship with religion=muslim, and as building=mosque. Ask for
+    // both, on nodes, ways and relations, or whole mosques go missing.
+    var f1 = '["amenity"="place_of_worship"]["religion"="muslim"]';
+    var f2 = '["building"="mosque"]';
+    return '[out:json][timeout:25];(' +
+           'node' + f1 + around + 'way' + f1 + around + 'relation' + f1 + around +
+           'node' + f2 + around + 'way' + f2 + around + 'relation' + f2 + around +
+           ');out center tags;';
   }
 
-  // Overpass can be slow (a busy query may need most of a minute) and
-  // occasionally answers 502: one request at a time, a 60 s timeout,
-  // rotating endpoints (main, kumi.systems mirror, main again) so one
-  // overloaded host cannot stall the feature.
+  // Overpass hosts vary wildly in speed and the public ones often
+  // stall for a minute or refuse requests outright, so every query is
+  // raced against all endpoints at once: the first host to answer
+  // with a parseable body wins and the rest are aborted.
   var NB_ENDPOINTS = ['https://overpass-api.de/api/interpreter',
                       'https://overpass.kumi.systems/api/interpreter',
-                      'https://overpass-api.de/api/interpreter'];
-  function nbFetch(kind, lat, lng, done) {
-    var attempt = 0;
-    (function tryOnce() {
+                      'https://overpass.private.coffee/api/interpreter'];
+  function nbRace(query, done) {
+    var settled = false, failed = 0, xhrs = [];
+    function fail(err) {
+      if (settled) return;
+      failed++;
+      if (failed >= NB_ENDPOINTS.length) { settled = true; done(err); }
+    }
+    NB_ENDPOINTS.forEach(function (url) {
       var xhr = new XMLHttpRequest();
-      xhr.open('POST', NB_ENDPOINTS[attempt], true);
+      xhrs.push(xhr);
+      xhr.open('POST', url, true);
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
-      xhr.timeout = 60000;
+      xhr.timeout = 30000;
       xhr.onreadystatechange = function () {
-        if (xhr.readyState !== 4) return;
+        if (settled || xhr.readyState !== 4) return;
         if (xhr.status === 200) {
-          try { done(null, JSON.parse(xhr.responseText)); return; }
-          catch (e) { /* malformed body: treat as a failure and retry */ }
+          var json;
+          try { json = JSON.parse(xhr.responseText); }
+          catch (e) { fail(new Error('overpass')); return; }
+          settled = true;
+          for (var i = 0; i < xhrs.length; i++) {
+            if (xhrs[i] !== xhr) { try { xhrs[i].abort(); } catch (e) { /* already done */ } }
+          }
+          done(null, json);
+          return;
         }
-        attempt++;
-        if (attempt < NB_ENDPOINTS.length) tryOnce(); else done(new Error('overpass'));
+        fail(new Error('overpass'));
       };
-      xhr.ontimeout = function () {
-        attempt++;
-        if (attempt < NB_ENDPOINTS.length) tryOnce(); else done(new Error('timeout'));
-      };
-      xhr.onerror = function () {
-        attempt++;
-        if (attempt < NB_ENDPOINTS.length) tryOnce(); else done(new Error('network'));
-      };
-      xhr.send('data=' + encodeURIComponent(nbQuery(kind, lat, lng)));
-    })();
+      xhr.ontimeout = function () { fail(new Error('timeout')); };
+      xhr.onerror = function () { fail(new Error('network')); };
+      try { xhr.send('data=' + encodeURIComponent(query)); }
+      catch (e) { fail(new Error('network')); }
+    });
+  }
+
+  function nbFetch(kind, lat, lng, done) {
+    if (kind !== 'mosques') { nbRace(nbQuery(kind, lat, lng, 15000), done); return; }
+    // Staged radius: 6 km answers fast in a city; if it finds fewer
+    // than 3 mosques, ask again at 15 km and use the wider results.
+    nbRace(nbQuery(kind, lat, lng, 6000), function (err, json) {
+      if (err) { done(err); return; }
+      if (nbParse(kind, json, lat, lng).length >= 3) { done(null, json); return; }
+      nbRace(nbQuery(kind, lat, lng, 15000), function (err2, json2) {
+        if (err2) { done(null, json); return; }  // keep the few we have
+        done(null, json2);
+      });
+    });
   }
 
   function nbParse(kind, json, lat, lng) {
@@ -2763,13 +2819,36 @@
                  km: nbHaversineKm(lat, lng, p.lat, p.lon) });
     }
     out.sort(function (a, b) { return a.km - b.km; });
-    return out.slice(0, 30);
+    // The broader query can return the same mosque twice (tagged both
+    // ways, or as both a node and a way): same name within ~75 m is
+    // the same place. The list is sorted by distance, so the first
+    // entry kept is the closer one.
+    var deduped = [], i2, j, dup;
+    for (i2 = 0; i2 < out.length; i2++) {
+      dup = false;
+      for (j = 0; j < deduped.length; j++) {
+        if (deduped[j].name === out[i2].name &&
+            nbHaversineKm(deduped[j].lat, deduped[j].lng, out[i2].lat, out[i2].lng) < 0.075) {
+          dup = true; break;
+        }
+      }
+      if (!dup) deduped.push(out[i2]);
+    }
+    return deduped.slice(0, 30);
   }
 
   function nbSetPos(lat, lng, isGPS) {
     var key = nbKey(lat, lng);
     if (key !== nbCacheKey) {
       nbCache.mosques = null; nbCache.halal = null; nbCacheKey = key;
+      nbFetchedAt.mosques = 0; nbFetchedAt.halal = 0;
+      // Instant render from the persistent cache; nbLoadTab still
+      // refreshes in the background because nbFetchedAt was reset.
+      var stored = nbStoreGet(key);
+      if (stored) {
+        if (stored.mosques) nbCache.mosques = stored.mosques;
+        if (stored.halal) nbCache.halal = stored.halal;
+      }
     }
     nbPos = { lat: lat, lng: lng };
     nbPosIsGPS = isGPS;
@@ -2784,7 +2863,7 @@
 
   function nbLocate(cb) {
     var done = false;
-    var timer = setTimeout(fallback, 12000);
+    var timer = setTimeout(fallback, 16000);
     function gps(lat, lng) {
       if (done) return; done = true; clearTimeout(timer);
       nbSetPos(lat, lng, true); cb();
@@ -2797,18 +2876,36 @@
       var cap = window.Capacitor && window.Capacitor.Plugins &&
                 window.Capacitor.Plugins.Geolocation;
       if (cap && cap.getCurrentPosition) {
-        cap.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000 })
-          .then(function (pos) {
-            if (pos && pos.coords) gps(pos.coords.latitude, pos.coords.longitude);
-            else fallback();
-          }, fallback);
+        var getPos = function () {
+          cap.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 })
+            .then(function (pos) {
+              if (pos && pos.coords) gps(pos.coords.latitude, pos.coords.longitude);
+              else fallback();
+            }, fallback);
+        };
+        // Ask for permission explicitly first: without this, iOS may
+        // never show the prompt and the position request silently
+        // fails, dropping the user onto the selected-city fallback.
+        if (cap.checkPermissions && cap.requestPermissions) {
+          cap.checkPermissions().then(function (st) {
+            var s = st && st.location;
+            if (s === 'granted') { getPos(); return; }
+            if (s === 'denied') { fallback(); return; }
+            // 'prompt' / 'prompt-with-rationale': ask, then act on the answer.
+            cap.requestPermissions().then(function (st2) {
+              if (st2 && st2.location === 'granted') getPos(); else fallback();
+            }, fallback);
+          }, getPos); // if the check itself fails, a direct request still prompts
+          return;
+        }
+        getPos();
         return;
       }
     } catch (e) { /* fall through to the Web Geolocation API */ }
     if (navigator.geolocation && navigator.geolocation.getCurrentPosition) {
       navigator.geolocation.getCurrentPosition(function (pos) {
         gps(pos.coords.latitude, pos.coords.longitude);
-      }, fallback, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+      }, fallback, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
     } else {
       fallback();
     }
@@ -2896,27 +2993,33 @@
 
   function nbLoadTab() {
     if (!nbPos) { nbRender(); return; }
-    if (nbCache[nbTab]) { nbRender(); return; }
-    nbRender(); // shows the "finding" state
-    if (nbBusy) return;
+    nbRender(); // cached results render instantly; otherwise the "finding" state
+    var kind = nbTab;
+    if (nbBusy || nbFetchedAt[kind]) return;
     nbBusy = true;
-    var kind = nbTab, lat = nbPos.lat, lng = nbPos.lng, key = nbCacheKey;
+    var lat = nbPos.lat, lng = nbPos.lng, key = nbCacheKey;
     nbFetch(kind, lat, lng, function (err, json) {
       nbBusy = false;
-      if (key !== nbCacheKey || screen !== 'nearby') return;
+      if (key !== nbCacheKey) { if (screen === 'nearby') nbLoadTab(); return; }
       if (err) {
-        if (nbTab === kind) {
-          var st = el('nb-status');
-          st.textContent = t('nb_error');
-          st.style.display = 'block';
-          nbShowRetry(true);
-        } else {
-          nbLoadTab();
+        // With cached results on screen a failed refresh changes
+        // nothing; with nothing to show, surface the error + retry.
+        if (!nbCache[kind] && screen === 'nearby') {
+          if (nbTab === kind) {
+            var st = el('nb-status');
+            st.textContent = t('nb_error');
+            st.style.display = 'block';
+            nbShowRetry(true);
+          } else {
+            nbLoadTab(); // fetch the tab the user is actually on
+          }
         }
         return;
       }
       nbCache[kind] = nbParse(kind, json, lat, lng);
-      nbLoadTab(); // render the current tab (or fetch it if still missing)
+      nbFetchedAt[kind] = Date.now();
+      nbStorePut(key, kind, nbCache[kind]);
+      if (screen === 'nearby') nbLoadTab(); // render fresh data (or fetch the other tab)
     });
   }
 
