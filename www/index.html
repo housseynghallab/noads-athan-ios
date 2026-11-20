@@ -395,6 +395,54 @@
     flex: none; color: #0b1e3a; background: #e8c877; border-radius: 999px;
     padding: 6px 18px; font-size: 22px; font-weight: 700; text-decoration: none;
   }
+  /* Qibla (v1.5.7): compass dial \u2014 navy face, gold markings, a Kaaba
+     marker at the bearing. The rotor turns against the phone's
+     heading, so when the phone faces the Qibla the marker reaches
+     the gold arrow fixed at the top. */
+  #qb-box {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; width: 100%;
+  }
+  #qb-dialwrap {
+    position: relative; flex: none;
+    width: min(400px, 86vw); height: min(400px, 86vw);
+    direction: ltr;
+  }
+  #qb-rotor {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    transition: transform 0.18s linear; will-change: transform;
+  }
+  #qb-svg { width: 100%; height: 100%; display: block; }
+  .qb-face { fill: #13294b; }
+  .qb-rim { fill: none; stroke: #e8c877; stroke-width: 2.5; }
+  .qb-arrow { fill: #ffd968; }
+  .qb-kaaba { fill: #0d1117; stroke: #e8c877; stroke-width: 1.4; }
+  .qb-kaaba-band { fill: #e8c877; }
+  #qb-topmark {
+    position: absolute; top: -5px; left: 50%; z-index: 2;
+    transform: translateX(-50%); width: 0; height: 0;
+    border-left: 12px solid transparent; border-right: 12px solid transparent;
+    border-top: 18px solid #ffd968;
+  }
+  #qb-center {
+    position: absolute; top: 50%; left: 50%; z-index: 2;
+    width: 14px; height: 14px; margin: -8px 0 0 -8px; border-radius: 50%;
+    background: #ffd968; border: 2px solid #0b1e3a;
+  }
+  #qb-readout { margin-top: 20px; font-size: 42px; font-weight: 700; color: #ffd968; text-align: center; }
+  #qb-point { color: #f5f1e6; }
+  #qb-dist { margin-top: 6px; font-size: 26px; color: #b9c8e2; text-align: center; }
+  #qb-from { margin-top: 4px; font-size: 22px; color: #8fa5c8; text-align: center; }
+  #qbEnable {
+    display: none; margin-top: 20px;
+    background: transparent; border: 2px solid #e8c877; border-radius: 999px;
+    color: #ffd968; font-size: 24px; font-weight: 700; font-family: inherit;
+    padding: 10px 34px; cursor: pointer;
+  }
+  #qb-note {
+    display: none; margin-top: 16px; max-width: 660px;
+    font-size: 21px; color: #ffe9a8; text-align: center;
+  }
   /* Pins are Leaflet divIcons (no marker image assets needed) */
   .nb-pin {
     width: 20px; height: 20px; margin: 2px; border-radius: 50%;
@@ -671,6 +719,12 @@
     #nbRetry { font-size: 16px; padding: 7px 26px; }
     .nbdir { font-size: 15px; padding: 5px 14px; }
     #nb-tabs { gap: 8px; margin-bottom: 8px; }
+    #qb-dialwrap { width: min(320px, 84vw); height: min(320px, 84vw); }
+    #qb-readout { font-size: 30px; margin-top: 14px; }
+    #qb-dist { font-size: 17px; }
+    #qb-from { font-size: 14px; }
+    #qbEnable { font-size: 16px; padding: 8px 26px; margin-top: 14px; }
+    #qb-note { font-size: 14px; margin-top: 12px; }
     .mqtable th, .mqtable td { padding: 8px 8px; font-size: 16px; }
     .mqtable th { font-size: 14px; }
     .mq-explain { font-size: 14px; }
@@ -816,6 +870,35 @@
     <button class="botback" id="botBackNearby">&#8592; Back</button>
   </div>
 
+  <div id="screen-qibla" class="screen">
+    <div class="scr-top"><button id="btnBackQibla" class="btn-back" tabindex="19">&#8592; Back</button><div class="scr-head" id="headQibla">Qibla</div><div class="scr-spacer"></div></div>
+    <div id="qb-box">
+      <div id="qb-dialwrap">
+        <div id="qb-rotor">
+          <svg id="qb-svg" viewBox="0 0 200 200" aria-hidden="true">
+            <circle cx="100" cy="100" r="97" class="qb-face"></circle>
+            <circle cx="100" cy="100" r="97" class="qb-rim"></circle>
+            <g id="qb-ticks"></g>
+            <g id="qb-marker">
+              <polygon points="100,4 91,24 109,24" class="qb-arrow"></polygon>
+              <rect x="90.5" y="34" width="19" height="17" rx="2" class="qb-kaaba"></rect>
+              <rect x="90.5" y="38.5" width="19" height="4" class="qb-kaaba-band"></rect>
+            </g>
+          </svg>
+        </div>
+        <div id="qb-topmark"></div>
+        <div id="qb-center"></div>
+      </div>
+      <div id="qb-readout"><span id="qb-deg"></span> <span id="qb-point"></span></div>
+      <div id="qb-dist"></div>
+      <div id="qb-from"></div>
+      <button id="qbEnable">Enable compass</button>
+      <div id="qb-note"></div>
+    </div>
+    <div class="scr-foot" id="footQibla"></div>
+    <button class="botback" id="botBackQibla">&#8592; Back</button>
+  </div>
+
   <div id="screen-mosque" class="screen">
     <div class="scr-top"><button id="btnBackMosque" class="btn-back" tabindex="17">&#8592; Back</button><div class="scr-head" id="headMosque">My Mosque</div><div class="scr-spacer"></div></div>
     <div id="mqbox" class="listbox"></div>
@@ -843,6 +926,7 @@
     <button class="ditem" id="dDuas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.4c-3.1-1-5.4-4.2-5.4-8.1V8.2c0-.8 1-1.1 1.5-.5l1 1.2V5.3c0-.9 1.1-1.2 1.6-.5L12 6.5l1.3-1.7c.5-.7 1.6-.4 1.6.5v3.6l1-1.2c.5-.6 1.5-.3 1.5.5v5.1c0 3.9-2.3 7.1-5.4 8.1Z"/><line x1="12" y1="6.5" x2="12" y2="21.4"/></svg><span id="dDuasTx">Duas</span></button>
     <button class="ditem" id="dHolidays"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="14" rx="2"/><line x1="4" y1="10.5" x2="20" y2="10.5"/><line x1="8.5" y1="3.5" x2="8.5" y2="7"/><line x1="15.5" y1="3.5" x2="15.5" y2="7"/><circle cx="12" cy="15.2" r="1.5"/></svg><span id="dHolidaysTx">Holidays</span></button>
     <button class="ditem" id="dNearby"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.4-5.5-6.4-10.3A6.4 6.4 0 0 1 12 4.2a6.4 6.4 0 0 1 6.4 6.5C18.4 15.5 12 21 12 21Z"/><circle cx="12" cy="10.5" r="2.3"/></svg><span id="dNearbyTx">Nearby</span></button>
+    <button class="ditem" id="dQibla"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M15.2 8.8 13.4 13.4 8.8 15.2 10.6 10.6Z"/></svg><span id="dQiblaTx">Qibla</span></button>
     <button class="ditem" id="dMosque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.2c2.3 1.9 4.6 3.8 4.6 6.6H7.4c0-2.8 2.3-4.7 4.6-6.6Z"/><line x1="12" y1="2.4" x2="12" y2="5.2"/><line x1="5.4" y1="11.8" x2="5.4" y2="20.5"/><line x1="18.6" y1="11.8" x2="18.6" y2="20.5"/><line x1="3" y1="20.5" x2="21" y2="20.5"/></svg><span id="dMosqueTx">My Mosque</span></button>
     <button class="ditem" id="dSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4.5" y1="7" x2="19.5" y2="7"/><circle cx="9" cy="7" r="2.1"/><line x1="4.5" y1="12" x2="19.5" y2="12"/><circle cx="15" cy="12" r="2.1"/><line x1="4.5" y1="17" x2="19.5" y2="17"/><circle cx="8" cy="17" r="2.1"/></svg><span id="dSettingsTx">Settings</span></button>
   </nav>
@@ -946,6 +1030,14 @@
     nb_halal_note: { en: 'Places tagged halal on OpenStreetMap \u2014 not every halal restaurant is tagged yet.', fr: 'Lieux \u00e9tiquet\u00e9s halal sur OpenStreetMap \u2014 tous les restaurants halal ne sont pas encore \u00e9tiquet\u00e9s.', ar: 'أماكن موسومة حلال على OpenStreetMap — ليست كل المطاعم الحلال موسومة بعد.' },
     nb_attribution: { en: 'Map data \u00a9 OpenStreetMap contributors', fr: 'Donn\u00e9es cartographiques \u00a9 OpenStreetMap contributors', ar: 'بيانات الخريطة © OpenStreetMap contributors' },
     my_mosque: { en: 'My Mosque', fr: 'Ma mosquée', ar: 'مسجدي' },
+    qibla_btn: { en: 'Qibla', fr: 'Qibla', ar: 'القبلة' },
+    head_qibla: { en: 'Qibla', fr: 'Qibla', ar: 'القبلة' },
+    qb_enable_compass: { en: 'Enable compass', fr: 'Activer la boussole', ar: 'تفعيل البوصلة' },
+    qb_no_compass: { en: 'Compass not available on this device \u2014 the marker shows the Qibla direction from your location.', fr: 'Boussole non disponible sur cet appareil \u2014 le rep\u00e8re indique la direction de la Qibla depuis votre position.', ar: 'البوصلة غير متاحة على هذا الجهاز — يُظهر المؤشر اتجاه القبلة من موقعك.' },
+    qb_distance: { en: 'Distance to the Kaaba', fr: 'Distance jusqu\u2019\u00e0 la Kaaba', ar: 'المسافة إلى الكعبة' },
+    qb_from: { en: 'From {city}', fr: 'Depuis {city}', ar: 'من {city}' },
+    qb_km: { en: 'km', fr: 'km', ar: 'كم' },
+    foot_qibla: { en: 'Turn your phone until the Kaaba marker reaches the gold arrow at the top.', fr: 'Tournez votre t\u00e9l\u00e9phone jusqu\u2019\u00e0 ce que le rep\u00e8re de la Kaaba atteigne la fl\u00e8che dor\u00e9e en haut.', ar: 'أدر هاتفك حتى يصل مؤشر الكعبة إلى السهم الذهبي في الأعلى.' },
     home_btn: { en: 'Home', fr: 'Accueil', ar: 'الرئيسية' },
     settings_btn: { en: 'Settings', fr: 'Réglages', ar: 'الإعدادات' },
     prayer_word: { en: 'Prayer', fr: 'Prière', ar: 'الصلاة' },
@@ -1092,6 +1184,7 @@
     el('dDuasTx').textContent = t('duas_btn');
     el('dHolidaysTx').textContent = t('holidays_btn');
     el('dNearbyTx').textContent = t('nearby_btn');
+    el('dQiblaTx').textContent = t('qibla_btn');
     el('dMosqueTx').textContent = t('my_mosque');
     el('dSettingsTx').textContent = t('settings_btn');
     el('headSettings').textContent = t('settings_btn');
@@ -1100,12 +1193,13 @@
     btnAsr.textContent = t('asr_word') + ': ' + t('hanafi') + ' / ' + t('shafii');
     adhanLabel();
     refreshSettingsUI();
-    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque', 'btnBackSettings', 'botBackQList', 'botBackQRead', 'botBackDList', 'botBackDRead', 'botBackHol', 'botBackLoc', 'botBackNearby', 'botBackMosque', 'botBackSettings'];
+    var bbIds = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackQibla', 'btnBackMosque', 'btnBackSettings', 'botBackQList', 'botBackQRead', 'botBackDList', 'botBackDRead', 'botBackHol', 'botBackLoc', 'botBackNearby', 'botBackQibla', 'botBackMosque', 'botBackSettings'];
     for (var bi = 0; bi < bbIds.length; bi++) el(bbIds[bi]).textContent = t('back');
     el('headQList').textContent = t('head_qlist');
     el('headDList').textContent = t('head_dlist');
     el('headLoc').textContent = t('head_loc');
     el('headNearby').textContent = t('head_nearby');
+    el('headQibla').textContent = t('head_qibla');
     el('headHol').innerHTML = t('head_hol') + ' &middot; <span id="hol-year"></span>';
     el('footQList').textContent = t('foot_qlist');
     el('footQRead').textContent = t('foot_qread');
@@ -1134,6 +1228,7 @@
     if (screen === 'loc') buildLocationList();
     nbRefreshTexts();
     if (screen === 'mosque') mqRender();
+    if (screen === 'qibla') qbRender();
     render(new Date());
   }
 
@@ -1807,9 +1902,9 @@
 
   /* ---------- Screens ---------- */
 
-  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc | nearby | mosque | settings
+  var screen = 'home'; // home | qlist | qread | dlist | dread | hol | loc | nearby | qibla | mosque | settings
   window.__appScreen = 'home';
-  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location', nearby: 'screen-nearby', mosque: 'screen-mosque', settings: 'screen-settings' };
+  var SCREEN_IDS = { qlist: 'screen-quran-list', qread: 'screen-quran-read', dlist: 'screen-duas-list', dread: 'screen-dua-read', hol: 'screen-holidays', loc: 'screen-location', nearby: 'screen-nearby', qibla: 'screen-qibla', mosque: 'screen-mosque', settings: 'screen-settings' };
 
   var btnPlay = el('btnPlay');
   var btnQuran = el('btnQuran');
@@ -1839,6 +1934,7 @@
       el(SCREEN_IDS[k]).className = 'screen' + (k === name ? ' on' : '');
     }
     refreshDrawerActive();
+    if (name !== 'qibla') qbStopCompass();
     if (name === 'home') {
       try { btnPlay.focus(); } catch (e) { /* ignore */ }
     } else if (document.activeElement && document.activeElement.blur) {
@@ -1863,6 +1959,7 @@
     else if (screen === 'hol') { showScreen('home'); }
     else if (screen === 'loc') { showScreen('home'); }
     else if (screen === 'nearby') { showScreen('home'); }
+    else if (screen === 'qibla') { showScreen('home'); }
     else if (screen === 'mosque') { showScreen('home'); }
     else if (screen === 'settings') { showScreen('home'); }
     // home: stay — Back on the home screen never leaves the app.
@@ -1871,8 +1968,8 @@
   /* ---------- Drawer navigation (v1.5.0) ---------- */
 
   var drawerOpen = false;
-  var DRAWER_FOR = { home: 'dHome', qlist: 'dQuran', qread: 'dQuran', dlist: 'dDuas', dread: 'dDuas', hol: 'dHolidays', loc: 'dSettings', nearby: 'dNearby', mosque: 'dMosque', settings: 'dSettings' };
-  var DRAWER_ITEMS = ['dHome', 'dQuran', 'dDuas', 'dHolidays', 'dNearby', 'dMosque', 'dSettings'];
+  var DRAWER_FOR = { home: 'dHome', qlist: 'dQuran', qread: 'dQuran', dlist: 'dDuas', dread: 'dDuas', hol: 'dHolidays', loc: 'dSettings', nearby: 'dNearby', qibla: 'dQibla', mosque: 'dMosque', settings: 'dSettings' };
+  var DRAWER_ITEMS = ['dHome', 'dQuran', 'dDuas', 'dHolidays', 'dNearby', 'dQibla', 'dMosque', 'dSettings'];
 
   function refreshDrawerActive() {
     var want = DRAWER_FOR[screen] || 'dHome';
@@ -2576,7 +2673,7 @@
   btnMosque.addEventListener('click', function () { openMosque(); });
   // Visible "← Back" buttons (Magic Remote pointer users): the same
   // one-level-up step as the Back key.
-  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackMosque', 'btnBackSettings', 'botBackQList', 'botBackQRead', 'botBackDList', 'botBackDRead', 'botBackHol', 'botBackLoc', 'botBackNearby', 'botBackMosque', 'botBackSettings'];
+  var backBtns = ['btnBackQList', 'btnBackQRead', 'btnBackDList', 'btnBackDRead', 'btnBackHol', 'btnBackLoc', 'btnBackNearby', 'btnBackQibla', 'btnBackMosque', 'btnBackSettings', 'botBackQList', 'botBackQRead', 'botBackDList', 'botBackDRead', 'botBackHol', 'botBackLoc', 'botBackNearby', 'botBackQibla', 'botBackMosque', 'botBackSettings'];
   for (var bb = 0; bb < backBtns.length; bb++) {
     el(backBtns[bb]).addEventListener('click', function () { goBack(); });
   }
@@ -2595,6 +2692,7 @@
   el('dDuas').addEventListener('click', drawerGo(function () { openDuas(); }));
   el('dHolidays').addEventListener('click', drawerGo(function () { openHolidays(); }));
   el('dNearby').addEventListener('click', drawerGo(function () { openNearby(); }));
+  el('dQibla').addEventListener('click', drawerGo(function () { openQibla(); }));
   el('dMosque').addEventListener('click', drawerGo(function () { openMosque(); }));
   el('dSettings').addEventListener('click', drawerGo(function () { openSettings(); }));
   btnSettings.addEventListener('click', function () { openSettings(); });
@@ -2717,6 +2815,60 @@
     try { window.localStorage.setItem(NB_STORE_KEY, JSON.stringify(s)); }
     catch (err) { /* quota / blocked storage: the in-memory cache still works */ }
   }
+  // Last real GPS fix, remembered across restarts ('nbLastGPS'):
+  // the best known position for instant renders and the prefetch.
+  var NB_LASTGPS_KEY = 'nbLastGPS';
+  function nbSaveLastGPS(lat, lng) {
+    try {
+      window.localStorage.setItem(NB_LASTGPS_KEY,
+        JSON.stringify({ lat: lat, lng: lng, ts: Date.now() }));
+    } catch (e) { /* storage unavailable: session behaviour unchanged */ }
+  }
+  function nbLastGPS() {
+    try {
+      var g = JSON.parse(window.localStorage.getItem(NB_LASTGPS_KEY) || 'null');
+      if (g && typeof g.lat === 'number' && typeof g.lng === 'number') return g;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  // Nearest stored entry within maxKm of a position, or null. With
+  // freshOnly set, entries older than the TTL are skipped. Indoor
+  // GPS drift moves the rounded cache key by a cell or two, so the
+  // exact-key lookup alone kept missing on real phones; this is the
+  // drift-tolerant fallback. Stale entries are included when
+  // freshOnly is off: a stale list beats a spinner, and the
+  // background refresh replaces it as soon as it lands.
+  function nbNearestStored(lat, lng, maxKm, freshOnly) {
+    var s = nbStoreLoad(), best = null, bestKm = maxKm, k, e, p, d;
+    for (k in s) {
+      if (!Object.prototype.hasOwnProperty.call(s, k)) continue;
+      e = s[k];
+      if (!e || (!e.mosques && !e.halal)) continue;
+      if (freshOnly && (typeof e.ts !== 'number' || (Date.now() - e.ts) > NB_TTL)) continue;
+      p = k.split(',');
+      var eLat = parseFloat(p[0]), eLng = parseFloat(p[1]);
+      if (isNaN(eLat) || isNaN(eLng)) continue;
+      d = nbHaversineKm(lat, lng, eLat, eLng);
+      if (d <= bestKm) { bestKm = d; best = e; }
+    }
+    return best;
+  }
+
+  // Recompute distances against a (slightly) different position and
+  // re-sort, so lists hydrated from a neighbouring cache cell still
+  // show honest distances for where the user actually is.
+  function nbResort(results, lat, lng) {
+    if (!results) return null;
+    var out = [], i;
+    for (i = 0; i < results.length; i++) {
+      out.push({ name: results[i].name, lat: results[i].lat, lng: results[i].lng,
+                 km: nbHaversineKm(lat, lng, results[i].lat, results[i].lng) });
+    }
+    out.sort(function (a, b) { return a.km - b.km; });
+    return out.slice(0, 30);
+  }
+
   var nbMap = null, nbLayer = null, nbMeMarker = null;
   var nbBusy = false;
 
@@ -2754,7 +2906,8 @@
   // with a parseable body wins and the rest are aborted.
   var NB_ENDPOINTS = ['https://overpass-api.de/api/interpreter',
                       'https://overpass.kumi.systems/api/interpreter',
-                      'https://overpass.private.coffee/api/interpreter'];
+                      'https://overpass.private.coffee/api/interpreter',
+                      'https://overpass.openstreetmap.fr/api/interpreter'];
   function nbRace(query, done) {
     var settled = false, failed = 0, xhrs = [];
     function fail(err) {
@@ -2840,14 +2993,33 @@
   function nbSetPos(lat, lng, isGPS) {
     var key = nbKey(lat, lng);
     if (key !== nbCacheKey) {
+      var prevCache = { mosques: nbCache.mosques, halal: nbCache.halal };
+      var prevParts = nbCacheKey ? nbCacheKey.split(',') : null;
       nbCache.mosques = null; nbCache.halal = null; nbCacheKey = key;
       nbFetchedAt.mosques = 0; nbFetchedAt.halal = 0;
       // Instant render from the persistent cache; nbLoadTab still
       // refreshes in the background because nbFetchedAt was reset.
-      var stored = nbStoreGet(key);
-      if (stored) {
-        if (stored.mosques) nbCache.mosques = stored.mosques;
-        if (stored.halal) nbCache.halal = stored.halal;
+      // Lookup order: the exact key, then the nearest fresh entry
+      // within 2 km, then the nearest stale one \u2014 GPS drift
+      // indoors kept landing in neighbouring cache cells and
+      // defeating the exact-key-only lookup on real phones.
+      var stored = nbStoreGet(key) ||
+                   nbNearestStored(lat, lng, 2, true) ||
+                   nbNearestStored(lat, lng, 2, false);
+      var kinds = ['mosques', 'halal'], ki, kind;
+      for (ki = 0; ki < kinds.length; ki++) {
+        kind = kinds[ki];
+        if (stored && stored[kind]) {
+          nbCache[kind] = nbResort(stored[kind], lat, lng);
+        } else if (prevCache[kind] && prevParts &&
+                   nbHaversineKm(lat, lng, parseFloat(prevParts[0]),
+                                 parseFloat(prevParts[1])) <= 2) {
+          // Nothing stored for this cell, but the list already in
+          // memory was computed a short drift away: keep showing it
+          // (distances recomputed) rather than blanking the screen
+          // while the refresh runs.
+          nbCache[kind] = nbResort(prevCache[kind], lat, lng);
+        }
       }
     }
     nbPos = { lat: lat, lng: lng };
@@ -2866,6 +3038,7 @@
     var timer = setTimeout(fallback, 16000);
     function gps(lat, lng) {
       if (done) return; done = true; clearTimeout(timer);
+      nbSaveLastGPS(lat, lng);
       nbSetPos(lat, lng, true); cb();
     }
     function fallback() {
@@ -3038,16 +3211,63 @@
     if (screen === 'nearby') nbRender();
   }
 
+  function nbCenterMap() {
+    if (!nbPos) return;
+    nbEnsureMap();
+    if (nbMap) {
+      nbMap.setView([nbPos.lat, nbPos.lng], nbMap.getZoom() || 13);
+      setTimeout(function () { if (nbMap) nbMap.invalidateSize(); }, 60);
+    }
+  }
+
+  // Prefetch (v1.5.7): shortly after app start, silently fill the
+  // persistent Nearby cache for the best known location (the last
+  // GPS fix if there is one, else the selected location) so the
+  // first open of Nearby is instant even though the Overpass
+  // servers are slow on a cold query. Skipped when fresh results
+  // already exist for the position or within 2 km of it. No UI, no
+  // spinner; failures are silent and change nothing.
+  function nbPrefetch() {
+    try {
+      var last = nbLastGPS();
+      var lat = last ? last.lat : loc.lat;
+      var lng = last ? last.lng : loc.lng;
+      var key = nbKey(lat, lng);
+      if (nbStoreGet(key) || nbNearestStored(lat, lng, 2, true)) return;
+      ['mosques', 'halal'].forEach(function (kind) {
+        nbFetch(kind, lat, lng, function (err, json) {
+          if (err) return; // silent: a failed prefetch changes nothing
+          nbStorePut(key, kind, nbParse(kind, json, lat, lng));
+        });
+      });
+    } catch (e) { /* prefetch is best-effort only */ }
+  }
+
   function openNearby() {
     showScreen('nearby');
     nbRefreshTexts();
-    if (nbPos) nbLoadTab(); else nbRender();
+    // Render IMMEDIATELY from the best known location \u2014 the
+    // position already in use, the last GPS fix, or the selected
+    // location \u2014 never waiting for a fresh GPS fix. nbSetPos
+    // hydrates the list from the persistent cache with drift and
+    // staleness tolerance, so a repeat open shows results at once
+    // instead of a spinner.
+    if (!nbPos) {
+      var last = nbLastGPS();
+      if (last) nbSetPos(last.lat, last.lng, true);
+      else nbSetPos(loc.lat, loc.lng, false);
+    }
+    nbCenterMap();
+    nbRender();
+    // Nothing cached anywhere near: start loading for the known
+    // position right away rather than waiting on the GPS.
+    if (!nbCache[nbTab]) nbLoadTab();
+    // Settle the position in the background (the permission flow
+    // runs exactly as before); nbLocate sets the settled position
+    // itself, then we re-centre and load/refresh for it. A refresh
+    // updates the rendered list in place \u2014 it never blanks it.
     nbLocate(function () {
-      nbEnsureMap();
-      if (nbMap && nbPos) {
-        nbMap.setView([nbPos.lat, nbPos.lng], nbMap.getZoom() || 13);
-        setTimeout(function () { if (nbMap) nbMap.invalidateSize(); }, 60);
-      }
+      nbCenterMap();
       nbLoadTab();
     });
   }
@@ -3296,6 +3516,184 @@
     }
     else if (id === 'mqEdit') { mqEditing = true; mqRender(); }
     else if (id === 'mqSave') { mqSaveIqama(); }
+  });
+
+  /* ---------- Qibla: direction of prayer from the selected location ---------- */
+
+  // The bearing is the initial great-circle bearing to the Kaaba
+  // from the app's current location \u2014 the same `loc` state the
+  // prayer times use, so when the GPS-first location rework lands
+  // this screen follows automatically. The distance is the
+  // great-circle (haversine) distance. Cross-checked against the
+  // Aladhan Qibla API (agreement < 0.01 deg): Montr\u00e9al 58.49,
+  // Algiers 105.41, Paris 119.16, Jakarta 295.15.
+  var QB_KAABA = { lat: 21.422487, lng: 39.826206 };
+  var QB_POINTS = {
+    en: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+    fr: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
+    ar: ['الشمال', 'الشمال الشرقي', 'الشرق', 'الجنوب الشرقي',
+         'الجنوب', 'الجنوب الغربي', 'الغرب', 'الشمال الغربي']
+  };
+
+  function qbBearing(lat, lng) {
+    var p1 = lat * Math.PI / 180, p2 = QB_KAABA.lat * Math.PI / 180;
+    var dl = (QB_KAABA.lng - lng) * Math.PI / 180;
+    var y = Math.sin(dl);
+    var x = Math.cos(p1) * Math.tan(p2) - Math.sin(p1) * Math.cos(dl);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
+
+  function qbDistanceKm(lat, lng) {
+    var dLat = (QB_KAABA.lat - lat) * Math.PI / 180;
+    var dLng = (QB_KAABA.lng - lng) * Math.PI / 180;
+    var s = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat * Math.PI / 180) * Math.cos(QB_KAABA.lat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * 6371 * Math.asin(Math.sqrt(s));
+  }
+
+  function qbPoint(bearing) {
+    var pts = QB_POINTS[lang] || QB_POINTS.en;
+    return pts[Math.round(bearing / 45) % 8];
+  }
+
+  var qbBearingNow = 0;    // bearing for the current location
+  var qbHeading = null;    // last compass heading (deg clockwise from north)
+  var qbShown = 0;         // rotor angle on screen (unbounded: smooth turns)
+  var qbListening = false;
+  var qbGotEvent = false;
+  var qbPermGranted = false;
+  var qbFallbackTimer = null;
+
+  // The rotor turns against the phone heading, so a fixed world
+  // direction D appears on screen at D - heading: when the phone
+  // faces the Qibla, the Kaaba marker reaches the top arrow. The
+  // displayed angle is unwrapped along the shortest path so the
+  // dial never spins the long way around between events.
+  function qbAimRotor() {
+    var target = -(qbHeading || 0);
+    var delta = ((target - qbShown + 540) % 360) - 180;
+    qbShown += delta;
+    var r = el('qb-rotor');
+    if (r) r.style.transform = 'rotate(' + qbShown + 'deg)';
+  }
+
+  function qbShowNote(show) {
+    var n = el('qb-note');
+    if (!n) return;
+    if (show) n.textContent = t('qb_no_compass');
+    n.style.display = show ? 'block' : 'none';
+  }
+
+  function qbBuildDial() {
+    var g = el('qb-ticks');
+    if (!g || g.getAttribute('data-built')) return;
+    var s = '', i, a, big, letters = ['N', 'E', 'S', 'W'];
+    for (i = 0; i < 72; i++) {
+      a = i * 5; big = (a % 30 === 0);
+      s += '<line x1="100" y1="7" x2="100" y2="' + (big ? 17 : 12) +
+           '" stroke="' + (big ? '#e8c877' : 'rgba(232,200,119,0.45)') +
+           '" stroke-width="' + (big ? 2.4 : 1.3) +
+           '" transform="rotate(' + a + ' 100 100)"/>';
+    }
+    for (i = 0; i < 4; i++) {
+      s += '<text x="100" y="47" text-anchor="middle" font-size="17" font-weight="700" fill="' +
+           (i === 0 ? '#ffd968' : '#f5f1e6') + '" transform="rotate(' + (i * 90) +
+           ' 100 100)">' + letters[i] + '</text>';
+    }
+    g.innerHTML = s;
+    g.setAttribute('data-built', '1');
+  }
+
+  function qbRender() {
+    qbBuildDial();
+    qbBearingNow = qbBearing(loc.lat, loc.lng);
+    var marker = el('qb-marker');
+    if (marker) marker.setAttribute('transform',
+      'rotate(' + qbBearingNow.toFixed(1) + ' 100 100)');
+    el('qb-deg').textContent = qbBearingNow.toLocaleString(LOCALE(),
+      { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '\u00b0';
+    el('qb-point').textContent = qbPoint(qbBearingNow);
+    el('qb-dist').textContent = t('qb_distance') + ': ' +
+      Math.round(qbDistanceKm(loc.lat, loc.lng)).toLocaleString(LOCALE()) +
+      ' ' + t('qb_km');
+    el('qb-from').textContent = t('qb_from').replace('{city}', loc.city);
+    el('qbEnable').textContent = t('qb_enable_compass');
+    el('footQibla').textContent = t('foot_qibla');
+    qbAimRotor();
+  }
+
+  function qbOnOrient(ev) {
+    if (!ev) return;
+    var h = null;
+    if (typeof ev.webkitCompassHeading === 'number' && !isNaN(ev.webkitCompassHeading)) {
+      h = ev.webkitCompassHeading; // iOS: degrees clockwise from north
+    } else if (typeof ev.alpha === 'number' && !isNaN(ev.alpha)) {
+      h = 360 - ev.alpha;          // Android absolute orientation
+    }
+    if (h === null) return;
+    qbHeading = ((h % 360) + 360) % 360;
+    if (!qbGotEvent) {
+      qbGotEvent = true;
+      if (qbFallbackTimer) { clearTimeout(qbFallbackTimer); qbFallbackTimer = null; }
+      qbShowNote(false);
+    }
+    if (screen === 'qibla') qbAimRotor();
+  }
+
+  function qbStartCompass() {
+    if (qbListening) return;
+    qbListening = true;
+    qbGotEvent = false;
+    window.addEventListener('deviceorientationabsolute', qbOnOrient, true);
+    window.addEventListener('deviceorientation', qbOnOrient, true);
+    // No compass data within a few seconds: keep the static dial
+    // (bearing arrow fixed) and say so \u2014 the screen stays useful.
+    if (qbFallbackTimer) clearTimeout(qbFallbackTimer);
+    qbFallbackTimer = setTimeout(function () {
+      qbFallbackTimer = null;
+      if (!qbGotEvent && screen === 'qibla') qbShowNote(true);
+    }, 4000);
+  }
+
+  function qbStopCompass() {
+    if (qbFallbackTimer) { clearTimeout(qbFallbackTimer); qbFallbackTimer = null; }
+    if (!qbListening) return;
+    qbListening = false;
+    window.removeEventListener('deviceorientationabsolute', qbOnOrient, true);
+    window.removeEventListener('deviceorientation', qbOnOrient, true);
+  }
+
+  function openQibla() {
+    showScreen('qibla');
+    qbRender();
+    var btn = el('qbEnable');
+    if (window.DeviceOrientationEvent &&
+        typeof window.DeviceOrientationEvent.requestPermission === 'function' &&
+        !qbPermGranted) {
+      // iOS 13+: compass access needs a user gesture to ask.
+      btn.style.display = 'block';
+    } else {
+      btn.style.display = 'none';
+      qbStartCompass();
+    }
+  }
+
+  el('qbEnable').addEventListener('click', function () {
+    var DOE = window.DeviceOrientationEvent;
+    if (!DOE || typeof DOE.requestPermission !== 'function') {
+      el('qbEnable').style.display = 'none';
+      qbStartCompass();
+      return;
+    }
+    DOE.requestPermission().then(function (state) {
+      el('qbEnable').style.display = 'none';
+      if (state === 'granted') { qbPermGranted = true; qbStartCompass(); }
+      else qbShowNote(true);
+    }, function () {
+      el('qbEnable').style.display = 'none';
+      qbShowNote(true);
+    });
   });
 
   /* ---------- Remote key handling ---------- */
@@ -3635,6 +4033,9 @@
   tick();
   handleLaunchParams();
   emitSchedule(); // arm the Android background athan on every app load
+  // Warm the Nearby cache a few seconds after startup (silent,
+  // deferred, non-blocking) so Nearby opens instantly later.
+  setTimeout(nbPrefetch, 4000);
   setInterval(tick, 1000);
   // Safety net: a dedicated athan check every 20 seconds as well.
   setInterval(function () { checkAthan(new Date()); }, 20000);
