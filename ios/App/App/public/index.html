@@ -395,10 +395,20 @@
     flex: none; color: #0b1e3a; background: #e8c877; border-radius: 999px;
     padding: 6px 18px; font-size: 22px; font-weight: 700; text-decoration: none;
   }
-  /* Qibla (v1.5.7): compass dial \u2014 navy face, gold markings, a Kaaba
-     marker at the bearing. The rotor turns against the phone's
-     heading, so when the phone faces the Qibla the marker reaches
-     the gold arrow fixed at the top. */
+  /* Qibla (v1.5.7, design v2): an engraved brass instrument on navy -
+     astrolabe-style degree ring with numerals along the limb,
+     concentric gold rings and a faint 8-point star lattice on the
+     face; a gold beam runs from the centre medallion to a detailed
+     Kaaba resting in a glowing halo. The rotor turns against the
+     phone's heading, so when the phone faces the Qibla the marker
+     reaches the ornate arrow fixed at the top and the dial lights
+     up (.qb-aligned, toggled by qbAimRotor - presentation only). */
+  #screen-qibla {
+    background:
+      radial-gradient(ellipse 95% 55% at 50% 32%, rgba(46, 92, 164, 0.40), rgba(11, 30, 58, 0) 62%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23e8c877' stroke-opacity='0.05' stroke-width='1'%3E%3Crect x='17' y='17' width='22' height='22'/%3E%3Crect x='17' y='17' width='22' height='22' transform='rotate(45 28 28)'/%3E%3C/g%3E%3C/svg%3E"),
+      #0b1e3a;
+  }
   #qb-box {
     flex: 1; display: flex; flex-direction: column;
     align-items: center; justify-content: center; width: 100%;
@@ -406,36 +416,82 @@
   #qb-dialwrap {
     position: relative; flex: none;
     width: min(400px, 86vw); height: min(400px, 86vw);
-    direction: ltr;
+    direction: ltr; border-radius: 50%;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.50), 0 0 46px rgba(31, 68, 130, 0.35);
+    transition: box-shadow 0.35s ease;
+  }
+  #qb-box.qb-aligned #qb-dialwrap {
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.50), 0 0 68px rgba(255, 217, 104, 0.55);
   }
   #qb-rotor {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     transition: transform 0.18s linear; will-change: transform;
   }
   #qb-svg { width: 100%; height: 100%; display: block; }
-  .qb-face { fill: #13294b; }
-  .qb-rim { fill: none; stroke: #e8c877; stroke-width: 2.5; }
+  .qb-face { fill: url(#qb-facegrad); }
+  .qb-rim { fill: none; stroke: #e8c877; stroke-width: 2.5; transition: stroke 0.35s ease; }
+  .qb-rim2 { fill: none; stroke: rgba(232, 200, 119, 0.45); stroke-width: 1; }
+  .qb-ring { fill: none; stroke: rgba(232, 200, 119, 0.38); stroke-width: 1.1; }
+  .qb-ring2 { fill: none; stroke: rgba(232, 200, 119, 0.22); stroke-width: 0.8; }
   .qb-arrow { fill: #ffd968; }
-  .qb-kaaba { fill: #0d1117; stroke: #e8c877; stroke-width: 1.4; }
-  .qb-kaaba-band { fill: #e8c877; }
+  .qb-beamcore { stroke: rgba(255, 217, 104, 0.7); stroke-width: 1.6; }
+  .qb-halo { fill: none; stroke: #ffd968; stroke-width: 1.6; transition: stroke-width 0.35s ease; }
+  .qb-kaaba { fill: #10141d; stroke: #e8c877; stroke-width: 1.2; }
+  .qb-kaaba-top { fill: #26355a; stroke: rgba(232, 200, 119, 0.85); stroke-width: 0.8; }
+  .qb-kaaba-side { fill: #070a10; stroke: rgba(232, 200, 119, 0.55); stroke-width: 0.8; }
+  .qb-kaaba-band { fill: url(#qb-bandgrad); }
+  .qb-kaaba-door { fill: url(#qb-bandgrad); }
+  #qb-box.qb-aligned .qb-rim { stroke: #ffd968; }
+  #qb-box.qb-aligned .qb-halo { stroke-width: 2.6; }
+  #qb-box.qb-aligned #qb-svg { filter: drop-shadow(0 0 9px rgba(255, 217, 104, 0.35)); }
   #qb-topmark {
-    position: absolute; top: -5px; left: 50%; z-index: 2;
-    transform: translateX(-50%); width: 0; height: 0;
-    border-left: 12px solid transparent; border-right: 12px solid transparent;
-    border-top: 18px solid #ffd968;
+    position: absolute; top: -11px; left: 50%; z-index: 3;
+    transform: translateX(-50%); width: 34px; height: 30px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+    transition: filter 0.35s ease;
   }
+  #qb-topmark svg { width: 100%; height: 100%; display: block; }
+  #qb-box.qb-aligned #qb-topmark { filter: drop-shadow(0 0 9px rgba(255, 217, 104, 0.95)); }
   #qb-center {
-    position: absolute; top: 50%; left: 50%; z-index: 2;
-    width: 14px; height: 14px; margin: -8px 0 0 -8px; border-radius: 50%;
-    background: #ffd968; border: 2px solid #0b1e3a;
+    position: absolute; top: 50%; left: 50%; z-index: 3;
+    width: 40px; height: 40px; margin: -21px 0 0 -21px; border-radius: 50%;
+    background: radial-gradient(circle at 36% 30%, #2c4f86, #13294b 72%);
+    border: 2px solid #e8c877;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55), inset 0 0 8px rgba(232, 200, 119, 0.35);
+    display: flex; align-items: center; justify-content: center;
+    transition: box-shadow 0.35s ease, border-color 0.35s ease;
   }
-  #qb-readout { margin-top: 20px; font-size: 42px; font-weight: 700; color: #ffd968; text-align: center; }
-  #qb-point { color: #f5f1e6; }
-  #qb-dist { margin-top: 6px; font-size: 26px; color: #b9c8e2; text-align: center; }
-  #qb-from { margin-top: 4px; font-size: 22px; color: #8fa5c8; text-align: center; }
+  #qb-box.qb-aligned #qb-center {
+    border-color: #ffd968;
+    box-shadow: 0 0 16px rgba(255, 217, 104, 0.65), inset 0 0 8px rgba(232, 200, 119, 0.5);
+  }
+  #qb-readout {
+    margin-top: 22px; font-size: 42px; font-weight: 700; color: #ffd968;
+    text-align: center; padding: 8px 34px 11px; border-radius: 999px;
+    border: 2px solid rgba(232, 200, 119, 0.8);
+    background: linear-gradient(180deg, rgba(246, 212, 124, 0.14), rgba(246, 212, 124, 0.05));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 6px 18px rgba(0, 0, 0, 0.35);
+    transition: background 0.35s ease, box-shadow 0.35s ease, color 0.35s ease;
+  }
+  #qb-point { color: #f5f1e6; transition: color 0.35s ease; }
+  #qb-box.qb-aligned #qb-readout {
+    background: linear-gradient(180deg, rgba(246, 212, 124, 0.95), rgba(223, 169, 46, 0.95));
+    border-color: #ffe9a8; color: #0b1e3a;
+    box-shadow: 0 0 26px rgba(255, 217, 104, 0.55), 0 6px 18px rgba(0, 0, 0, 0.35);
+  }
+  #qb-box.qb-aligned #qb-point { color: #0b1e3a; }
+  #qb-info {
+    margin-top: 14px; display: flex; flex-direction: column; align-items: center; gap: 1px;
+    max-width: 92vw; padding: 10px 26px; border-radius: 14px;
+    background: rgba(19, 41, 75, 0.72);
+    border: 1px solid rgba(232, 200, 119, 0.35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  #qb-from { font-size: 22px; color: #8fa5c8; text-align: center; }
+  #qb-dist { font-size: 24px; color: #d7e1f2; text-align: center; }
   #qbEnable {
     display: none; margin-top: 20px;
-    background: transparent; border: 2px solid #e8c877; border-radius: 999px;
+    background: rgba(246, 212, 124, 0.10); border: 2px solid #e8c877; border-radius: 999px;
     color: #ffd968; font-size: 24px; font-weight: 700; font-family: inherit;
     padding: 10px 34px; cursor: pointer;
   }
@@ -443,6 +499,7 @@
     display: none; margin-top: 16px; max-width: 660px;
     font-size: 21px; color: #ffe9a8; text-align: center;
   }
+
   /* Pins are Leaflet divIcons (no marker image assets needed) */
   .nb-pin {
     width: 20px; height: 20px; margin: 2px; border-radius: 50%;
@@ -720,7 +777,8 @@
     .nbdir { font-size: 15px; padding: 5px 14px; }
     #nb-tabs { gap: 8px; margin-bottom: 8px; }
     #qb-dialwrap { width: min(320px, 84vw); height: min(320px, 84vw); }
-    #qb-readout { font-size: 30px; margin-top: 14px; }
+    #qb-readout { font-size: 30px; margin-top: 14px; padding: 6px 24px 8px; }
+    #qb-info { margin-top: 10px; padding: 8px 18px; border-radius: 12px; }
     #qb-dist { font-size: 17px; }
     #qb-from { font-size: 14px; }
     #qbEnable { font-size: 16px; padding: 8px 26px; margin-top: 14px; }
@@ -876,22 +934,56 @@
       <div id="qb-dialwrap">
         <div id="qb-rotor">
           <svg id="qb-svg" viewBox="0 0 200 200" aria-hidden="true">
+            <defs>
+              <radialGradient id="qb-facegrad" cx="50%" cy="40%" r="78%">
+                <stop offset="0%" stop-color="#1e3f73"></stop>
+                <stop offset="55%" stop-color="#142c52"></stop>
+                <stop offset="100%" stop-color="#0b1f3d"></stop>
+              </radialGradient>
+              <radialGradient id="qb-glowgrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffd968" stop-opacity="0.55"></stop>
+                <stop offset="55%" stop-color="#ffd968" stop-opacity="0.16"></stop>
+                <stop offset="100%" stop-color="#ffd968" stop-opacity="0"></stop>
+              </radialGradient>
+              <linearGradient id="qb-beamgrad" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#ffd968" stop-opacity="0.60"></stop>
+                <stop offset="100%" stop-color="#ffd968" stop-opacity="0.04"></stop>
+              </linearGradient>
+              <linearGradient id="qb-bandgrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f6d47c"></stop>
+                <stop offset="52%" stop-color="#dfa92e"></stop>
+                <stop offset="100%" stop-color="#b9861f"></stop>
+              </linearGradient>
+            </defs>
             <circle cx="100" cy="100" r="97" class="qb-face"></circle>
+            <g id="qb-lattice"></g>
+            <circle cx="100" cy="100" r="70" class="qb-ring"></circle>
+            <circle cx="100" cy="100" r="52" class="qb-ring2"></circle>
             <circle cx="100" cy="100" r="97" class="qb-rim"></circle>
+            <circle cx="100" cy="100" r="93" class="qb-rim2"></circle>
             <g id="qb-ticks"></g>
             <g id="qb-marker">
-              <polygon points="100,4 91,24 109,24" class="qb-arrow"></polygon>
-              <rect x="90.5" y="34" width="19" height="17" rx="2" class="qb-kaaba"></rect>
-              <rect x="90.5" y="38.5" width="19" height="4" class="qb-kaaba-band"></rect>
+              <polygon points="96.6,100 103.4,100 100,15" fill="url(#qb-beamgrad)"></polygon>
+              <line x1="100" y1="100" x2="100" y2="17" class="qb-beamcore"></line>
+              <circle cx="100" cy="27" r="21" fill="url(#qb-glowgrad)"></circle>
+              <circle cx="100" cy="27" r="15.5" class="qb-halo"></circle>
+              <polygon points="100,1.5 94,12 106,12" class="qb-arrow"></polygon>
+              <polygon points="89.5,20.5 94,16.5 113.5,16.5 109.5,20.5" class="qb-kaaba-top"></polygon>
+              <polygon points="109.5,20.5 113.5,16.5 113.5,34.5 109.5,38.5" class="qb-kaaba-side"></polygon>
+              <rect x="89.5" y="20.5" width="20" height="18" class="qb-kaaba"></rect>
+              <rect x="89.5" y="24.6" width="20" height="4.6" class="qb-kaaba-band"></rect>
+              <rect x="94" y="24.6" width="1.1" height="4.6" fill="rgba(96,64,0,0.55)"></rect>
+              <rect x="99.4" y="24.6" width="1.1" height="4.6" fill="rgba(96,64,0,0.55)"></rect>
+              <rect x="104.8" y="24.6" width="1.1" height="4.6" fill="rgba(96,64,0,0.55)"></rect>
+              <rect x="104.6" y="29.8" width="3.6" height="8.7" class="qb-kaaba-door"></rect>
             </g>
           </svg>
         </div>
-        <div id="qb-topmark"></div>
-        <div id="qb-center"></div>
+        <div id="qb-topmark"><svg viewBox="0 0 34 30" aria-hidden="true"><circle cx="17" cy="4.6" r="2.7" fill="none" stroke="#ffd968" stroke-width="1.7"></circle><polygon points="17,28.5 6.5,10.5 27.5,10.5" fill="#ffd968"></polygon><polygon points="17,21.5 12,13 22,13" fill="#0b1e3a" opacity="0.38"></polygon></svg></div>
+        <div id="qb-center"><svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><rect x="4" y="6.5" width="16" height="13" rx="1.2" fill="#0d1117" stroke="#e8c877" stroke-width="1"></rect><rect x="4" y="9.6" width="16" height="3" fill="#e8c877"></rect><rect x="15.6" y="14" width="2.6" height="5.5" fill="#e8c877"></rect></svg></div>
       </div>
       <div id="qb-readout"><span id="qb-deg"></span> <span id="qb-point"></span></div>
-      <div id="qb-dist"></div>
-      <div id="qb-from"></div>
+      <div id="qb-info"><span id="qb-from"></span><span id="qb-dist"></span></div>
       <button id="qbEnable">Enable compass</button>
       <div id="qb-note"></div>
     </div>
@@ -3564,6 +3656,7 @@
   var qbGotEvent = false;
   var qbPermGranted = false;
   var qbFallbackTimer = null;
+  var qbAligned = false;  // presentation-only: marker within ~2 deg of the top pointer
 
   // The rotor turns against the phone heading, so a fixed world
   // direction D appears on screen at D - heading: when the phone
@@ -3576,6 +3669,19 @@
     qbShown += delta;
     var r = el('qb-rotor');
     if (r) r.style.transform = 'rotate(' + qbShown + 'deg)';
+    // Aligned state (presentation only): with a live heading, when
+    // the Kaaba marker sits within ~2 degrees of the top pointer,
+    // light the dial up. No effect on bearing or rotation behaviour.
+    var al = false;
+    if (qbHeading !== null) {
+      var disp = ((qbBearingNow - qbHeading) % 360 + 360) % 360;
+      al = (disp <= 2 || disp >= 358);
+    }
+    if (al !== qbAligned) {
+      qbAligned = al;
+      var b = el('qb-box');
+      if (b && b.classList && b.classList.toggle) b.classList.toggle('qb-aligned', al);
+    }
   }
 
   function qbShowNote(show) {
@@ -3588,21 +3694,55 @@
   function qbBuildDial() {
     var g = el('qb-ticks');
     if (!g || g.getAttribute('data-built')) return;
-    var s = '', i, a, big, letters = ['N', 'E', 'S', 'W'];
+    var s = '', i, a, big;
+    // Tick limb: a line every 5 degrees, longer at 30 degrees.
     for (i = 0; i < 72; i++) {
       a = i * 5; big = (a % 30 === 0);
-      s += '<line x1="100" y1="7" x2="100" y2="' + (big ? 17 : 12) +
+      s += '<line x1="100" y1="5" x2="100" y2="' + (big ? 14.5 : 10) +
            '" stroke="' + (big ? '#e8c877' : 'rgba(232,200,119,0.45)') +
            '" stroke-width="' + (big ? 2.4 : 1.3) +
            '" transform="rotate(' + a + ' 100 100)"/>';
     }
+    // Degree numerals every 30 degrees, engraved along the limb in
+    // the astrolabe manner (they turn with the dial).
+    for (i = 0; i < 12; i++) {
+      a = i * 30;
+      s += '<text x="100" y="27.5" text-anchor="middle" font-size="9.5" ' +
+           'font-weight="600" fill="#dcbc66" transform="rotate(' + a +
+           ' 100 100)">' + a + '</text>';
+    }
+    // Cardinals large, intercardinals small, on the same inner ring.
+    var cards = [['N', 0], ['E', 90], ['S', 180], ['W', 270]];
     for (i = 0; i < 4; i++) {
-      s += '<text x="100" y="47" text-anchor="middle" font-size="17" font-weight="700" fill="' +
-           (i === 0 ? '#ffd968' : '#f5f1e6') + '" transform="rotate(' + (i * 90) +
-           ' 100 100)">' + letters[i] + '</text>';
+      s += '<text x="100" y="45" text-anchor="middle" font-size="17" font-weight="700" fill="' +
+           (i === 0 ? '#ffd968' : '#f5f1e6') + '" transform="rotate(' + cards[i][1] +
+           ' 100 100)">' + cards[i][0] + '</text>';
+    }
+    var inter = [['NE', 45], ['SE', 135], ['SW', 225], ['NW', 315]];
+    for (i = 0; i < 4; i++) {
+      s += '<text x="100" y="43" text-anchor="middle" font-size="9" font-weight="600" ' +
+           'fill="#9fb4d8" transform="rotate(' + inter[i][1] +
+           ' 100 100)">' + inter[i][0] + '</text>';
     }
     g.innerHTML = s;
     g.setAttribute('data-built', '1');
+    // Faint 8-point star lattice (two overlaid squares per star) laid
+    // over the face - decoration only, kept well inside the dial.
+    var lat = el('qb-lattice');
+    if (lat) {
+      var ls = '', stars = [[100, 100, 13], [73, 100, 10], [127, 100, 10],
+                            [100, 73, 10], [100, 127, 10], [81, 81, 10],
+                            [119, 81, 10], [81, 119, 10], [119, 119, 10]];
+      for (i = 0; i < stars.length; i++) {
+        var cx = stars[i][0], cy = stars[i][1], h = stars[i][2] * 0.72;
+        ls += '<rect x="' + (cx - h) + '" y="' + (cy - h) + '" width="' + (2 * h) +
+              '" height="' + (2 * h) + '" fill="none" stroke="rgba(232,200,119,0.15)" stroke-width="0.9"/>' +
+              '<rect x="' + (cx - h) + '" y="' + (cy - h) + '" width="' + (2 * h) +
+              '" height="' + (2 * h) + '" fill="none" stroke="rgba(232,200,119,0.15)" stroke-width="0.9" ' +
+              'transform="rotate(45 ' + cx + ' ' + cy + ')"/>';
+      }
+      lat.innerHTML = ls;
+    }
   }
 
   function qbRender() {
